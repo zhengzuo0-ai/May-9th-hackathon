@@ -192,60 +192,64 @@ export default function MapView({
 
       {mapCard ? <MapInfoCard card={mapCard} onClose={() => setMapCard(null)} /> : null}
 
-      <div className="absolute right-4 top-[330px] z-20 grid w-[250px] gap-2 rounded border border-[#2a3140] bg-[#10141c]/90 px-3 py-2 text-[11px] text-[#d7deea] shadow-2xl backdrop-blur">
+      <div className="absolute right-4 top-[330px] z-20 grid w-[220px] gap-2 rounded-md border border-[#2a3140] bg-[#10141c]/88 px-2.5 py-2 text-[10px] text-[#d7deea] shadow-2xl backdrop-blur">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-[0.04em] text-[#8c96a8]">
-            Map Views
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#9aa6b8]">
+            Layers
           </span>
           <button
             type="button"
             onClick={() => setControlsOpen((open) => !open)}
-            className="rounded border border-[#2a3140] bg-[#07090d]/70 px-2 py-1 font-mono text-[10px] text-[#d7deea] transition hover:border-[#4a90e2]"
+            className="h-6 rounded border border-[#2a3140] bg-[#07090d]/75 px-2 font-mono text-[9px] uppercase tracking-[0.04em] text-[#9aa6b8] transition hover:border-[#4a90e2] hover:text-[#d7deea]"
           >
-            {controlsOpen ? "Collapse" : "Expand"}
+            {controlsOpen ? "Hide" : "Show"}
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-3 gap-1 rounded-md border border-[#2a3140] bg-[#07090d]/65 p-1">
           {(["satellite", "geology", "admin"] as MapMode[]).map((mode) => (
             <button
               key={mode}
+              type="button"
               onPointerDown={() => setMapMode(mode)}
               onClick={() => setMapMode(mode)}
-              className={`rounded border px-2 py-1 font-mono text-[10px] capitalize transition ${
+              className={`h-7 rounded px-1 font-mono text-[9px] uppercase tracking-[0.02em] transition ${
                 mapMode === mode
-                  ? "border-[#f5c542] bg-[#f5c542]/15 text-[#ffe39b]"
-                  : "border-[#2a3140] bg-[#07090d]/70 text-[#9aa6b8] hover:border-[#4a90e2]"
+                  ? "bg-[#f5c542]/20 text-[#ffe39b] ring-1 ring-[#f5c542]"
+                  : "text-[#8c96a8] hover:bg-[#171c26] hover:text-[#d7deea]"
               }`}
             >
-              {mode}
+              {mode === "satellite" ? "Sat" : mode === "geology" ? "Geo" : "Admin"}
             </button>
           ))}
         </div>
         {controlsOpen ? (
           <>
-            <div className="grid gap-1">
-              <MapLegendItem color="#d9e7ff" label="Country boundary" variant="line" />
-              <MapLegendItem color="#ff1f1f" label="Selected package" variant="line" />
-              <MapLegendItem color="#d98b4a" label="Public project" />
-              <MapLegendItem color="#22d3ee" label="ASM / disturbance" />
-              <MapLegendItem color="#4a90e2" label="Evidence source" />
-              <MapLegendItem color="#9fe3c4" label="City" />
+            <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+              <MapLegendItem color="#ff1f1f" label="Package" variant="line" />
+              <MapLegendItem color="#d98b4a" label="Project" />
+              <MapLegendItem color="#22d3ee" label="ASM" />
+              <MapLegendItem color="#4a90e2" label="Source" />
+              <MapLegendItem color="#d9e7ff" label="Boundary" variant="line" muted />
+              <MapLegendItem color="#9fe3c4" label="City" muted />
             </div>
-            <p className="text-[10px] leading-4 text-[#ffd48a]">
-              Satellite is the base map. Toggle geology or admin overlays in and out for evidence review.
+            <p className="truncate border-t border-[#2a3140] pt-1.5 text-[9px] leading-4 text-[#ffd48a]">
+              Satellite base + optional overlays
             </p>
-            <div className="grid gap-2 border-t border-[#2a3140] pt-2">
+            <div className="grid gap-1.5 border-t border-[#2a3140] pt-1.5">
               <OpacitySlider
-                label="Satellite"
+                active={mapMode === "satellite"}
+                label="Sat"
                 value={opacity.satellite}
                 onChange={(value) => setOpacity((current) => ({ ...current, satellite: value }))}
               />
               <OpacitySlider
-                label="Geology"
+                active={mapMode === "geology"}
+                label="Geo"
                 value={opacity.geology}
                 onChange={(value) => setOpacity((current) => ({ ...current, geology: value }))}
               />
               <OpacitySlider
+                active={mapMode === "admin"}
                 label="Admin"
                 value={opacity.admin}
                 onChange={(value) => setOpacity((current) => ({ ...current, admin: value }))}
@@ -362,16 +366,22 @@ function MapInfoCard({
 }
 
 function OpacitySlider({
+  active,
   label,
   value,
   onChange,
 }: {
+  active: boolean;
   label: string;
   value: number;
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="grid grid-cols-[64px_1fr_34px] items-center gap-2 font-mono text-[10px] text-[#9aa6b8]">
+    <label
+      className={`grid grid-cols-[44px_1fr_28px] items-center gap-1.5 font-mono text-[9px] transition ${
+        active ? "text-[#d7deea]" : "text-[#6f7a8c]"
+      }`}
+    >
       <span>{label}</span>
       <input
         type="range"
@@ -380,9 +390,11 @@ function OpacitySlider({
         step="0.05"
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="h-1 accent-[#f5c542]"
+        className={`h-1 min-w-0 accent-[#f5c542] ${active ? "" : "opacity-65"}`}
       />
-      <span className="text-right text-[#d7deea]">{Math.round(value * 100)}%</span>
+      <span className={active ? "text-right text-[#d7deea]" : "text-right text-[#7c8798]"}>
+        {Math.round(value * 100)}%
+      </span>
     </label>
   );
 }
@@ -390,23 +402,25 @@ function OpacitySlider({
 function MapLegendItem({
   color,
   label,
+  muted = false,
   variant = "dot",
 }: {
   color: string;
   label: string;
+  muted?: boolean;
   variant?: "dot" | "line";
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className={`flex min-w-0 items-center gap-1.5 ${muted ? "opacity-55" : ""}`}>
       <span
         className={
           variant === "line"
-            ? "h-0 w-5 border-t-2 border-dashed"
-            : "h-2.5 w-2.5 rounded-full border border-[#07090d]"
+            ? "h-0 w-4 shrink-0 border-t-2 border-dashed"
+            : "h-2 w-2 shrink-0 rounded-full border border-[#07090d]"
         }
         style={variant === "line" ? { borderColor: color } : { backgroundColor: color }}
       />
-      <span className="font-mono">{label}</span>
+      <span className="truncate font-mono text-[9px]">{label}</span>
     </div>
   );
 }
