@@ -514,16 +514,16 @@ function SurfaceTargetPin({
       onClick={onClick}
       onPointerDown={(event) => event.stopPropagation()}
       title={title}
-      className="absolute z-30 h-16 w-16 cursor-pointer"
+      className="absolute z-30 h-5 w-5 cursor-pointer"
       style={{
         left: `${left}%`,
         top: `${top}%`,
-        transform: `translate(-50%, -95%) scale(${1 / zoom})`,
-        transformOrigin: "50% 95%",
+        transform: `translate(-50%, -50%) scale(${1 / zoom})`,
+        transformOrigin: "50% 50%",
       }}
     >
-      <span className="absolute left-6 top-6 block h-4 w-4 rotate-45 rounded-[55%_55%_55%_0] border-2 border-[#120909] bg-[#ff2d2d] shadow-[0_0_0_2px_rgba(255,45,45,0.22)]" />
-      <span className="absolute left-[29px] top-[29px] block h-1.5 w-1.5 rounded-full bg-[#ffd0d0]" />
+      <span className="absolute left-1/2 top-1/2 block h-4 w-4 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[55%_55%_55%_0] border-2 border-[#120909] bg-[#ff2d2d] shadow-[0_0_0_2px_rgba(255,45,45,0.22)]" />
+      <span className="absolute left-1/2 top-1/2 block h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ffd0d0]" />
     </button>
   );
 }
