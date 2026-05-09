@@ -34,7 +34,7 @@ type MapCard =
       title: string;
       subtitle: string;
       meta: string;
-      href: string;
+      href?: string;
     };
 type DragState = {
   pointerId: number;
@@ -60,6 +60,20 @@ const cities = [
   { name: "Yamoussoukro", role: "Capital / central access", lng: -5.28, lat: 6.82 },
   { name: "Bouaké", role: "Northern corridor", lng: -5.03, lat: 7.69 },
   { name: "Man", role: "Western access", lng: -7.55, lat: 7.41 },
+];
+const surfaceTargets = [
+  { id: "target-kokumbo-1", lng: -5.292, lat: 6.315, note: "license surface target" },
+  { id: "target-kokumbo-2", lng: -5.245, lat: 6.333, note: "license surface target" },
+  { id: "target-yamoussoukro-1", lng: -5.071, lat: 6.546, note: "license surface target" },
+  { id: "target-yamoussoukro-2", lng: -5.018, lat: 6.579, note: "license surface target" },
+  { id: "target-yaoure-1", lng: -5.586, lat: 6.822, note: "license surface target" },
+  { id: "target-yaoure-2", lng: -5.552, lat: 6.804, note: "license surface target" },
+  { id: "target-west-1", lng: -5.398, lat: 6.472, note: "nearby disturbance check" },
+  { id: "target-east-1", lng: -4.872, lat: 6.438, note: "nearby disturbance check" },
+  { id: "target-south-1", lng: -5.132, lat: 6.108, note: "nearby disturbance check" },
+  { id: "target-bandama-1", lng: -5.218, lat: 6.664, note: "river corridor check" },
+  { id: "target-bandama-2", lng: -5.184, lat: 6.704, note: "river corridor check" },
+  { id: "target-north-1", lng: -5.032, lat: 6.725, note: "nearby disturbance check" },
 ];
 
 export default function MapView({
@@ -194,28 +208,40 @@ export default function MapView({
             strokeDasharray="1.4 0.8"
             vectorEffect="non-scaling-stroke"
           />
-          {concessions.map((concession) => (
-            <g
-              key={concession.id}
-              onClick={() => onSelect(concession.id)}
-              className="cursor-pointer"
-            >
-              {polygonRings(concession.polygon).map((ring, index) => {
-                const isSelected = concession.id === selected.id;
-                return (
-                  <polygon
-                    key={`${concession.id}-${index}`}
-                    points={ring.map(([lng, lat]) => projectPoint(lng, lat).join(",")).join(" ")}
-                    fill={isSelected ? "rgba(255,31,31,0.13)" : "rgba(255,123,74,0.08)"}
-                    stroke={isSelected ? "#ff1f1f" : "#ff7b4a"}
-                    strokeWidth={isSelected ? 0.46 : 0.26}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                );
-              })}
-            </g>
-          ))}
+          <g onClick={() => onSelect(selected.id)} className="cursor-pointer">
+            {polygonRings(selected.polygon).map((ring, index) => (
+              <polygon
+                key={`${selected.id}-${index}`}
+                points={ring.map(([lng, lat]) => projectPoint(lng, lat).join(",")).join(" ")}
+                fill="rgba(255,31,31,0.13)"
+                stroke="#ff1f1f"
+                strokeWidth={0.46}
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+          </g>
         </svg>
+
+        {surfaceTargets.map((target) => {
+          const [left, top] = projectPoint(target.lng, target.lat);
+          return (
+            <SurfaceTargetPin
+              key={target.id}
+              left={left}
+              top={top}
+              title={target.note}
+              zoom={zoom}
+              onClick={() =>
+                setMapCard({
+                  kind: "evidence",
+                  title: "Possible artisanal mining",
+                  subtitle: "Surface target / field verification",
+                  meta: "Satellite-visible surface disturbance candidate. Treat as a field-check target, not a confirmed mineralized occurrence or source-backed disclosure.",
+                })
+              }
+            />
+          );
+        })}
 
         {cities.map((city) => {
           const [left, top] = projectPoint(city.lng, city.lat);
@@ -250,17 +276,21 @@ export default function MapView({
                 })
               }
               title={`${project.project} / ${project.company} / ${project.distanceKm}km`}
-              className={`absolute z-10 rounded-full border-2 border-[#07090d] shadow-lg transition ${
-                focused ? "h-5 w-5 ring-4 ring-[#f5c542]/45" : "h-3 w-3 hover:h-3.5 hover:w-3.5"
-              }`}
+              className="absolute z-10 flex items-center gap-1.5 text-left"
               style={{
                 left: `${left}%`,
                 top: `${top}%`,
-                backgroundColor: pinColor(kind),
                 transform: `translate(-50%, -50%) scale(${1 / zoom})`,
                 transformOrigin: "50% 50%",
               }}
-            />
+            >
+              <span
+                className={`shrink-0 rounded-full border-2 border-[#07090d] shadow-lg transition ${
+                  focused ? "h-5 w-5 ring-4 ring-[#f5c542]/45" : "h-3 w-3"
+                }`}
+                style={{ backgroundColor: pinColor(kind) }}
+              />
+            </button>
           );
         })}
 
@@ -361,6 +391,7 @@ export default function MapView({
               <MapLegendItem color="#d98b4a" label="Project" />
               <MapLegendItem color="#22d3ee" label="ASM" />
               <MapLegendItem color="#4a90e2" label="Source" />
+              <MapLegendItem color="#ff2d2d" label="Target" muted />
               <MapLegendItem color="#d9e7ff" label="Boundary" variant="line" muted />
               <MapLegendItem color="#9fe3c4" label="City" muted />
             </div>
@@ -464,6 +495,39 @@ function MapPin({
   );
 }
 
+function SurfaceTargetPin({
+  left,
+  top,
+  title,
+  zoom,
+  onClick,
+}: {
+  left: number;
+  top: number;
+  title: string;
+  zoom: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onPointerDown={(event) => event.stopPropagation()}
+      title={title}
+      className="absolute z-30 h-16 w-16 cursor-pointer"
+      style={{
+        left: `${left}%`,
+        top: `${top}%`,
+        transform: `translate(-50%, -95%) scale(${1 / zoom})`,
+        transformOrigin: "50% 95%",
+      }}
+    >
+      <span className="absolute left-6 top-6 block h-4 w-4 rotate-45 rounded-[55%_55%_55%_0] border-2 border-[#120909] bg-[#ff2d2d] shadow-[0_0_0_2px_rgba(255,45,45,0.22)]" />
+      <span className="absolute left-[29px] top-[29px] block h-1.5 w-1.5 rounded-full bg-[#ffd0d0]" />
+    </button>
+  );
+}
+
 function MapInfoCard({
   card,
   onClose,
@@ -472,7 +536,11 @@ function MapInfoCard({
   onClose: () => void;
 }) {
   return (
-    <div className="absolute bottom-24 left-4 z-30 max-w-[360px] rounded border border-[#2a3140] bg-[#10141c]/95 p-3 text-xs text-[#d5dbea] shadow-2xl backdrop-blur">
+    <div
+      className="absolute bottom-24 left-4 z-[60] max-w-[360px] rounded border border-[#2a3140] bg-[#10141c]/95 p-3 text-xs text-[#d5dbea] shadow-2xl backdrop-blur"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.04em] text-[#8c96a8]">
@@ -495,6 +563,7 @@ function MapInfoCard({
           href={card.href}
           target="_blank"
           rel="noreferrer"
+          onPointerDown={(event) => event.stopPropagation()}
           className="mt-3 inline-flex rounded border border-[#4a90e2]/40 bg-[#4a90e2]/10 px-2 py-1 font-semibold text-[#b9dcff] hover:border-[#4a90e2]"
         >
           Open source
