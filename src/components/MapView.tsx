@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import type { Concession, PublicCompanyProject, SourcePack } from "@/lib/types";
 
 type ProjectWithDistance = PublicCompanyProject & { distanceKm: number };
@@ -272,10 +273,13 @@ function RasterLayer({
   filter: string;
 }) {
   return (
-    <img
+    <Image
       src={src}
       alt=""
-      className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300"
+      fill
+      sizes="100vw"
+      priority
+      className="pointer-events-none object-cover object-center transition-opacity duration-300"
       style={{
         filter,
         opacity,

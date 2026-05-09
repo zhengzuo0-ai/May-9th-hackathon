@@ -138,16 +138,14 @@ export default function Workstation({
     [compareSelected],
   );
 
-  const selectedSourcesRaw = sourcePacks.filter(
-    (source) => source.concessionId === selected.id,
-  );
-  const selectedSources =
-    selectedSourcesRaw.length > 0 ? selectedSourcesRaw : sourcePacks;
-  const compareSourcesRaw = sourcePacks.filter(
-    (source) => source.concessionId === compareSelected.id,
-  );
-  const compareSources =
-    compareSourcesRaw.length > 0 ? compareSourcesRaw : sourcePacks;
+  const selectedSources = useMemo(() => {
+    const raw = sourcePacks.filter((source) => source.concessionId === selected.id);
+    return raw.length > 0 ? raw : sourcePacks;
+  }, [selected.id]);
+  const compareSources = useMemo(() => {
+    const raw = sourcePacks.filter((source) => source.concessionId === compareSelected.id);
+    return raw.length > 0 ? raw : sourcePacks;
+  }, [compareSelected.id]);
 
   const closestMapAnchor = nearbyProjects[0];
   const selectedCommoditySet = new Set(
