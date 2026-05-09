@@ -54,57 +54,93 @@ function normalizeQuestion(body: FollowUpRequest) {
     return body.preset.trim();
   }
 
-  return "Verify first";
+  return "What should we verify first?";
 }
 
 function isPresetQuestion(question: string) {
-  return ["Verify first", "Make it PASS", "Compare blocks", "Draft IR email"].includes(
-    question,
-  );
+  return [
+    "What should we verify first?",
+    "Which layer is weakest?",
+    "Which nearby companies matter most?",
+    "What is the 30-day field plan?",
+  ].includes(question);
 }
 
 function fallbackFollowUp(question: string, evidence: EvidenceItem[]) {
   const topEvidence = evidence.slice(0, 3);
 
   switch (question) {
-    case "Verify first":
+    case "What should we verify first?":
       return [
         "Verify these items first:",
         ...topEvidence.map(
           (item) => `- ${item.summary} Source: ${item.sourceTitle}.`,
         ),
-        "- Confirm concession license status and boundaries against official records.",
+        "- Confirm AOI license status and boundaries against official cadastre records.",
+        "- Separate direct AOI evidence from nearby comparable evidence before upgrading the triage route.",
       ].join("\n");
-    case "Make it PASS":
+    case "Which layer is weakest?":
       return [
-        "To make this pass an investment committee screen:",
-        "- Add direct evidence inside the block, not only nearby analogues.",
-        "- Confirm license standing, ownership, and encumbrances.",
-        "- Tie target geology to the strongest public comparable.",
+        weakestLayerAnswer(evidence),
+        "",
+        "Use the weak layer to define the next work order before spending time on broader narrative polish.",
       ].join("\n");
-    case "Compare blocks":
+    case "Which nearby companies matter most?":
       return [
-        "Comparison frame:",
-        `- Evidence density: ${evidence.length} extracted item(s).`,
-        `- Projects represented: ${new Set(evidence.map((item) => item.project)).size}.`,
-        "- Rank higher when public projects share commodity, host geology, and infrastructure access.",
+        "Nearby company priority:",
+        ...rankCompanies(evidence).map(
+          ([company, count]) => `- ${company}: ${count} extracted evidence item(s).`,
+        ),
+        "- Prioritize companies with resource, drilling, operating mine, or development-stage facts over proximity-only references.",
       ].join("\n");
-    case "Draft IR email":
+    case "What is the 30-day field plan?":
       return [
-        "Subject: Follow-up on concession-adjacent public disclosures",
-        "",
-        "Hi team,",
-        "",
-        "We are reviewing a nearby concession and would appreciate confirmation of current license standing, recent technical work, and any public reports covering geology, sampling, or drilling in the area.",
-        "",
-        "Best,",
-        "Concession Recon",
+        "30-day field + data plan:",
+        "- Week 1: verify cadastre status, AOI coordinates, access, and public-company comparable locations.",
+        "- Week 2: interpret remote-sensing disturbance, ASM/workings, drainage, and structural targets.",
+        "- Week 3: field-check priority sites, collect reconnaissance samples, and log access constraints.",
+        "- Week 4: reconcile assay/geology observations with public evidence and update the PRIORITIZE / WATCH / DEFER triage route.",
       ].join("\n");
     default:
       return [
-        "I can answer from the extracted evidence once an OpenAI API key is configured.",
+        "I can answer from the extracted AOI evidence once an OpenAI API key is configured.",
         "",
         ...topEvidence.map((item) => `- ${item.summary} Source: ${item.sourceTitle}.`),
       ].join("\n");
   }
+}
+
+function weakestLayerAnswer(evidence: EvidenceItem[]) {
+  const layers: Array<[string, EvidenceItem["evidenceType"][]]> = [
+    ["remote sensing", ["remote_sensing"]],
+    ["ASM / workings / trenching", ["asm_activity", "trenching"]],
+    ["public company drilling or resources", ["drilling_result", "resource_estimate"]],
+    ["geochemistry", ["geochemistry"]],
+    ["geophysics", ["geophysics"]],
+    ["cadastre", ["cadastre", "license_activity"]],
+  ];
+
+  const layerCounts = layers.map(([label, types]) => [
+    label,
+    evidence.filter((item) => types.includes(item.evidenceType)).length,
+  ] as const);
+  const [weakestLabel, weakestCount] = layerCounts.sort((a, b) => a[1] - b[1])[0];
+
+  return `Weakest layer: ${weakestLabel} (${weakestCount} extracted item(s)).`;
+}
+
+function rankCompanies(evidence: EvidenceItem[]) {
+  const counts = new Map<string, number>();
+
+  for (const item of evidence) {
+    if (!item.company) {
+      continue;
+    }
+
+    counts.set(item.company, (counts.get(item.company) ?? 0) + 1);
+  }
+
+  const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+
+  return ranked.length > 0 ? ranked.slice(0, 5) : [["No company evidence yet", 0] as const];
 }

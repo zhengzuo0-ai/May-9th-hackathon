@@ -1,4 +1,4 @@
-export type CountryCode = "BW" | "NA";
+export type CountryCode = "CI";
 
 export type Concession = {
   id: string;
@@ -36,6 +36,8 @@ export type SourcePack = {
     | "company_page"
     | "presentation"
     | "annual_report"
+    | "technical_report"
+    | "research_paper"
     | "news_release";
   retrievedAt: string;
   text: string;
@@ -53,7 +55,14 @@ export type EvidenceItem = {
     | "resource_estimate"
     | "license_activity"
     | "infrastructure"
-    | "corporate_activity";
+    | "corporate_activity"
+    | "remote_sensing"
+    | "asm_activity"
+    | "geochemistry"
+    | "geophysics"
+    | "trenching"
+    | "cadastre"
+    | "research_paper";
   summary: string;
   extractedFacts: {
     commodity?: string;

@@ -18,7 +18,7 @@ export function getOpenAIClient() {
     defaultHeaders: OPENAI_BASE_URL?.includes("openrouter.ai")
       ? {
           "HTTP-Referer": "http://127.0.0.1:3000",
-          "X-Title": "Concession Recon",
+          "X-Title": "West Africa AOI Intelligence",
         }
       : undefined,
   });

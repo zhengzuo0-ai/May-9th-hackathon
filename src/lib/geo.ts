@@ -1,6 +1,8 @@
 import * as turf from "@turf/turf";
 import type { Concession, PublicCompanyProject } from "@/lib/types";
 
+const DEFAULT_RECON_RADIUS_KM = 150;
+
 export function getConcessionCentroid(concession: Concession): [number, number] {
   const point = turf.centroid(concession.polygon);
   return point.geometry.coordinates as [number, number];
@@ -19,7 +21,7 @@ export function getProjectDistanceKm(
 export function getNearbyProjects(
   concession: Concession,
   projects: PublicCompanyProject[],
-  radiusKm = 320,
+  radiusKm = DEFAULT_RECON_RADIUS_KM,
 ) {
   return projects
     .filter((project) => project.concessionId === concession.id)

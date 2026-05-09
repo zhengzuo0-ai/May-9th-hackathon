@@ -83,7 +83,7 @@ function fallbackEvidence(sourcePacks: SourcePack[]): EvidenceItem[] {
     evidenceType: inferEvidenceType(source.text),
     summary: firstSentence(source.text),
     extractedFacts: extractFacts(source.text),
-    confidence: "medium",
+    confidence: inferConfidence(source.text),
   }));
 }
 
@@ -95,12 +95,66 @@ function firstSentence(text: string) {
 function inferEvidenceType(text: string): EvidenceItem["evidenceType"] {
   const normalized = text.toLowerCase();
 
+  if (
+    normalized.includes("research library") ||
+    normalized.includes("research paper") ||
+    normalized.includes("technical reference") ||
+    normalized.includes("open-access study")
+  ) {
+    return "research_paper";
+  }
+
+  if (
+    normalized.includes("remote sensing") ||
+    normalized.includes("satellite") ||
+    normalized.includes("disturbance") ||
+    normalized.includes("imagery")
+  ) {
+    return "remote_sensing";
+  }
+
+  if (normalized.includes("trench") || normalized.includes("trenching")) {
+    return "trenching";
+  }
+
   if (normalized.includes("drilling") || normalized.includes("metres of")) {
     return "drilling_result";
   }
 
   if (normalized.includes("resource") || normalized.includes("reserve")) {
     return "resource_estimate";
+  }
+
+  if (normalized.includes("geochem") || normalized.includes("soil sample")) {
+    return "geochemistry";
+  }
+
+  if (
+    normalized.includes("geophys") ||
+    normalized.includes("magnetic") ||
+    normalized.includes("induced polarization") ||
+    normalized.includes("ip survey")
+  ) {
+    return "geophysics";
+  }
+
+  if (
+    normalized.includes("artisanal") ||
+    normalized.includes("asm") ||
+    normalized.includes("artisanal pit") ||
+    normalized.includes("artisanal pits") ||
+    normalized.includes("workings")
+  ) {
+    return "asm_activity";
+  }
+
+  if (
+    normalized.includes("cadastre") ||
+    normalized.includes("license") ||
+    normalized.includes("licence") ||
+    normalized.includes("permit")
+  ) {
+    return "cadastre";
   }
 
   if (normalized.includes("mine") || normalized.includes("operation")) {
@@ -118,12 +172,51 @@ function extractFacts(text: string): EvidenceItem["extractedFacts"] {
   return {
     commodity: commodityFromText(text),
     intercept: text.match(/\d+(?:\.\d+)?\s*metres?/i)?.[0],
-    grade: text.match(/\d+(?:\.\d+)?%\s*[A-Za-z0-9]+/i)?.[0],
+    grade:
+      text.match(/\d+(?:\.\d+)?\s*g\/t\s*[A-Za-z]+/i)?.[0] ??
+      text.match(/\d+(?:\.\d+)?%\s*[A-Za-z0-9]+/i)?.[0],
   };
+}
+
+function inferConfidence(text: string): EvidenceItem["confidence"] {
+  const normalized = text.toLowerCase();
+  const proximityOnly =
+    (normalized.includes("near") ||
+      normalized.includes("nearby") ||
+      normalized.includes("proximity") ||
+      normalized.includes("adjacent")) &&
+    !hasDirectExplorationSignal(normalized);
+
+  return proximityOnly ? "low" : "medium";
+}
+
+function hasDirectExplorationSignal(normalizedText: string) {
+  return [
+    "drilling",
+    "metres of",
+    "resource",
+    "reserve",
+    "geochem",
+    "soil sample",
+    "geophys",
+    "magnetic",
+    "induced polarization",
+    "workings",
+    "artisanal",
+    "trench",
+  ].some((term) => normalizedText.includes(term));
 }
 
 function commodityFromText(text: string) {
   const normalized = text.toLowerCase();
+
+  if (
+    normalized.includes("gold") ||
+    normalized.includes(" au") ||
+    normalized.includes("g/t au")
+  ) {
+    return "Au";
+  }
 
   if (normalized.includes("uranium") || normalized.includes("u3o8")) {
     return "U3O8";

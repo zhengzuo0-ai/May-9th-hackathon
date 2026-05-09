@@ -1,0 +1,127 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ci-national-boundary",
+        "kind": "country_boundary",
+        "name": "Côte d'Ivoire",
+        "label": "Country boundary"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-7.55, 4.35],
+            [-6.72, 4.64],
+            [-5.74, 4.93],
+            [-4.88, 5.09],
+            [-4.02, 5.24],
+            [-3.32, 5.12],
+            [-2.82, 5.18],
+            [-2.78, 6.08],
+            [-2.96, 6.98],
+            [-3.18, 7.86],
+            [-3.39, 8.62],
+            [-3.09, 9.37],
+            [-2.82, 9.94],
+            [-3.96, 9.91],
+            [-4.95, 10.15],
+            [-5.83, 10.43],
+            [-6.75, 10.73],
+            [-7.59, 10.41],
+            [-8.16, 9.82],
+            [-8.24, 8.95],
+            [-8.08, 8.1],
+            [-8.45, 7.42],
+            [-8.55, 6.58],
+            [-7.95, 5.72],
+            [-7.64, 4.91],
+            [-7.55, 4.35]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "city-abidjan",
+        "kind": "city",
+        "name": "Abidjan",
+        "role": "Economic capital and main port"
+      },
+      "geometry": { "type": "Point", "coordinates": [-4.0083, 5.3599] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "city-yamoussoukro",
+        "kind": "city",
+        "name": "Yamoussoukro",
+        "role": "Political capital"
+      },
+      "geometry": { "type": "Point", "coordinates": [-5.2767, 6.8276] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "city-bouafle",
+        "kind": "city",
+        "name": "Bouaflé",
+        "role": "City near Yaouré and the Bouaflé greenstone belt"
+      },
+      "geometry": { "type": "Point", "coordinates": [-5.7442, 6.9904] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "city-kokumbo",
+        "kind": "city",
+        "name": "Kokumbo",
+        "role": "ASM / Landsat study area"
+      },
+      "geometry": { "type": "Point", "coordinates": [-5.285, 6.31] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "city-oume",
+        "kind": "city",
+        "name": "Oumé",
+        "role": "Town near Bonikro–Agbaou operating complex"
+      },
+      "geometry": { "type": "Point", "coordinates": [-5.4176, 6.3831] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "city-toumodi",
+        "kind": "city",
+        "name": "Toumodi",
+        "role": "Department context for Kokumbo ASM study"
+      },
+      "geometry": { "type": "Point", "coordinates": [-5.0175, 6.5578] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "city-san-pedro",
+        "kind": "city",
+        "name": "San-Pédro",
+        "role": "South-west port"
+      },
+      "geometry": { "type": "Point", "coordinates": [-6.6363, 4.7485] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "city-man",
+        "kind": "city",
+        "name": "Man",
+        "role": "Western regional center"
+      },
+      "geometry": { "type": "Point", "coordinates": [-7.5538, 7.4125] }
+    }
+  ]
+}

@@ -3,9 +3,17 @@
 import { useEffect, useRef } from "react";
 import maplibregl, { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import * as turf from "@turf/turf";
+import ciMapContext from "@/data/cote_divoire_map_context.json";
 import type { Concession, PublicCompanyProject, SourcePack } from "@/lib/types";
 
 type ProjectWithDistance = PublicCompanyProject & { distanceKm: number };
+type MapContextProperties = {
+  id: string;
+  kind: "country_boundary" | "city";
+  name: string;
+  label?: string;
+  role?: string;
+};
 
 type MapViewProps = {
   concessions: Concession[];
@@ -18,30 +26,30 @@ type MapViewProps = {
 const style = {
   version: 8,
   sources: {
-    satellite: {
+    osm: {
       type: "raster",
-      tiles: [
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      ],
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
       tileSize: 256,
-      attribution:
-        "Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+      attribution: "© OpenStreetMap contributors",
     },
   },
   layers: [
     {
-      id: "satellite",
+      id: "osm",
       type: "raster",
-      source: "satellite",
+      source: "osm",
       paint: {
-        "raster-saturation": -0.1,
-        "raster-contrast": 0.18,
-        "raster-brightness-min": 0,
-        "raster-brightness-max": 0.78,
+        "raster-saturation": -0.25,
+        "raster-contrast": 0.12,
+        "raster-brightness-min": 0.08,
+        "raster-brightness-max": 0.72,
       },
     },
   ],
 } as maplibregl.StyleSpecification;
+
+const mapContext =
+  ciMapContext as GeoJSON.FeatureCollection<GeoJSON.Geometry, MapContextProperties>;
 
 export default function MapView({
   concessions,
@@ -67,8 +75,8 @@ export default function MapView({
     mapRef.current = new maplibregl.Map({
       container: containerRef.current,
       style,
-      center: [22.5, -22.2],
-      zoom: 4.4,
+      center: [-5.5, 7.5],
+      zoom: 6,
       attributionControl: false,
     });
 
@@ -100,7 +108,33 @@ export default function MapView({
         type: "geojson",
         data: buildEvidenceCollection(initialData.projects, initialData.sources),
       });
+      map.addSource("map-context", {
+        type: "geojson",
+        data: mapContext,
+      });
 
+      map.addLayer({
+        id: "country-boundary-fill",
+        type: "fill",
+        source: "map-context",
+        filter: ["==", ["get", "kind"], "country_boundary"],
+        paint: {
+          "fill-color": "#111827",
+          "fill-opacity": 0.08,
+        },
+      });
+      map.addLayer({
+        id: "country-boundary-line",
+        type: "line",
+        source: "map-context",
+        filter: ["==", ["get", "kind"], "country_boundary"],
+        paint: {
+          "line-color": "#d9e7ff",
+          "line-width": 2,
+          "line-opacity": 0.8,
+          "line-dasharray": [3, 1.5],
+        },
+      });
       map.addLayer({
         id: "radius-fill",
         type: "fill",
@@ -191,10 +225,10 @@ export default function MapView({
         type: "circle",
         source: "projects",
         paint: {
-          "circle-color": "#d98b4a",
+          "circle-color": projectPointColorExpression(),
           "circle-radius": 13,
           "circle-opacity": 0.12,
-          "circle-stroke-color": "#d98b4a",
+          "circle-stroke-color": projectPointColorExpression(),
           "circle-stroke-opacity": 0.35,
           "circle-stroke-width": 1,
         },
@@ -204,7 +238,7 @@ export default function MapView({
         type: "circle",
         source: "projects",
         paint: {
-          "circle-color": "#d98b4a",
+          "circle-color": projectPointColorExpression(),
           "circle-radius": 7,
           "circle-stroke-color": "#07090d",
           "circle-stroke-width": 2,
@@ -221,18 +255,71 @@ export default function MapView({
           "circle-stroke-width": 1,
         },
       });
+      map.addLayer({
+        id: "city-halos",
+        type: "circle",
+        source: "map-context",
+        filter: ["==", ["get", "kind"], "city"],
+        paint: {
+          "circle-color": "#9fe3c4",
+          "circle-radius": 8,
+          "circle-opacity": 0.12,
+          "circle-stroke-color": "#9fe3c4",
+          "circle-stroke-opacity": 0.38,
+          "circle-stroke-width": 1,
+        },
+      });
+      map.addLayer({
+        id: "city-pins",
+        type: "circle",
+        source: "map-context",
+        filter: ["==", ["get", "kind"], "city"],
+        paint: {
+          "circle-color": "#9fe3c4",
+          "circle-radius": 4.5,
+          "circle-stroke-color": "#07090d",
+          "circle-stroke-width": 1.5,
+        },
+      });
+      addContextLabels(map);
+
+      const hoverPopup = new maplibregl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        offset: 12,
+      });
+      const bindHover = (
+        layerId: string,
+        getHtml: (feature: maplibregl.MapGeoJSONFeature) => string,
+      ) => {
+        map.on("mouseenter", layerId, (event) => {
+          const feature = event.features?.[0];
+          if (!feature) return;
+          map.getCanvas().style.cursor = "pointer";
+          hoverPopup.setLngLat(event.lngLat).setHTML(getHtml(feature)).addTo(map);
+        });
+        map.on("mousemove", layerId, (event) => {
+          if (hoverPopup.isOpen()) hoverPopup.setLngLat(event.lngLat);
+        });
+        map.on("mouseleave", layerId, () => {
+          map.getCanvas().style.cursor = "";
+          hoverPopup.remove();
+        });
+      };
 
       map.on("click", "concession-fill", (event) => {
-        const id = event.features?.[0]?.properties?.id;
+        const feature = event.features?.[0];
+        const id = feature?.properties?.id;
         if (typeof id === "string") onSelectRef.current(id);
-      });
-
-      map.on("mouseenter", "concession-fill", () => {
-        map.getCanvas().style.cursor = "pointer";
-      });
-
-      map.on("mouseleave", "concession-fill", () => {
-        map.getCanvas().style.cursor = "";
+        new maplibregl.Popup()
+          .setLngLat(event.lngLat)
+          .setHTML(
+            buildPopupHtml("AOI", feature?.properties?.name, [
+              "Selected concession search area",
+              "Red polygon and blue dashed radius",
+            ]),
+          )
+          .addTo(map);
       });
 
       map.on("click", "project-pins", (event) => {
@@ -241,18 +328,78 @@ export default function MapView({
         new maplibregl.Popup()
           .setLngLat(event.lngLat)
           .setHTML(
-            `<div class="recon-popup"><strong>${feature.properties?.project}</strong><span>${feature.properties?.company}</span><em>${feature.properties?.distanceKm}km from selected block</em></div>`,
+            buildPopupHtml("Public project", feature.properties?.project, [
+              feature.properties?.company,
+              feature.properties?.pinLabel,
+              `${feature.properties?.distanceKm}km from selected AOI`,
+            ]),
           )
           .addTo(map);
       });
 
-      map.on("mouseenter", "project-pins", () => {
-        map.getCanvas().style.cursor = "pointer";
+      map.on("click", "evidence-pins", (event) => {
+        const feature = event.features?.[0];
+        if (!feature) return;
+        new maplibregl.Popup()
+          .setLngLat(event.lngLat)
+          .setHTML(
+            buildPopupHtml("Evidence source", feature.properties?.title, [
+              feature.properties?.project,
+              feature.properties?.sourceType,
+            ]),
+          )
+          .addTo(map);
       });
 
-      map.on("mouseleave", "project-pins", () => {
-        map.getCanvas().style.cursor = "";
+      map.on("click", "city-pins", (event) => {
+        const feature = event.features?.[0];
+        if (!feature) return;
+        new maplibregl.Popup()
+          .setLngLat(event.lngLat)
+          .setHTML(
+            buildPopupHtml("City", feature.properties?.name, [
+              feature.properties?.role,
+            ]),
+          )
+          .addTo(map);
       });
+
+      map.on("click", "country-boundary-line", (event) => {
+        const feature = event.features?.[0];
+        if (!feature) return;
+        new maplibregl.Popup()
+          .setLngLat(event.lngLat)
+          .setHTML(
+            buildPopupHtml("Country boundary", feature.properties?.name, [
+              "Simplified Côte d'Ivoire national outline",
+            ]),
+          )
+          .addTo(map);
+      });
+
+      bindHover("concession-fill", (feature) =>
+        buildPopupHtml("AOI", feature.properties?.name, [
+          "Selected concession search area",
+        ]),
+      );
+      bindHover("project-pins", (feature) =>
+        buildPopupHtml("Public project", feature.properties?.project, [
+          feature.properties?.company,
+        ]),
+      );
+      bindHover("evidence-pins", (feature) =>
+        buildPopupHtml("Evidence source", feature.properties?.title, [
+          feature.properties?.project,
+        ]),
+      );
+      bindHover("city-pins", (feature) =>
+        buildPopupHtml("City", feature.properties?.name, [feature.properties?.role]),
+      );
+      bindHover("country-boundary-line", (feature) =>
+        buildPopupHtml("Country boundary", feature.properties?.name, [
+          "Simplified national outline",
+        ]),
+      );
     });
 
     return () => {
@@ -277,12 +424,135 @@ export default function MapView({
     });
   }, [concessions, projects, selected, sources]);
 
-  return <div ref={containerRef} className="h-full w-full" />;
+  return (
+    <div className="relative h-full w-full">
+      <div ref={containerRef} className="h-full w-full" />
+      <div className="pointer-events-none absolute right-4 top-4 grid gap-2 rounded border border-[#2a3140] bg-[#10141c]/90 px-3 py-2 text-[11px] text-[#d7deea] shadow-2xl backdrop-blur">
+        <MapLegendItem color="#d9e7ff" label="Country boundary" variant="line" />
+        <MapLegendItem color="#ff1f1f" label="Selected AOI" variant="line" />
+        <MapLegendItem color="#d98b4a" label="Public project" />
+        <MapLegendItem color="#22d3ee" label="ASM / disturbance" />
+        <MapLegendItem color="#4a90e2" label="Evidence source" />
+        <MapLegendItem color="#9fe3c4" label="City" />
+      </div>
+    </div>
+  );
+}
+
+function projectPointColorExpression() {
+  return [
+    "case",
+    ["==", ["get", "pinKind"], "asm"],
+    "#22d3ee",
+    ["==", ["get", "pinKind"], "institutional"],
+    "#9fe3c4",
+    "#d98b4a",
+  ] as maplibregl.ExpressionSpecification;
+}
+
+function MapLegendItem({
+  color,
+  label,
+  variant = "dot",
+}: {
+  color: string;
+  label: string;
+  variant?: "dot" | "line";
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className={
+          variant === "line"
+            ? "h-0 w-5 border-t-2 border-dashed"
+            : "h-2.5 w-2.5 rounded-full border border-[#07090d]"
+        }
+        style={
+          variant === "line"
+            ? { borderColor: color }
+            : { backgroundColor: color }
+        }
+      />
+      <span className="font-mono">{label}</span>
+    </div>
+  );
+}
+
+function addContextLabels(map: MapLibreMap) {
+  const cityFeatures = mapContext.features.filter(
+    (
+      feature,
+    ): feature is GeoJSON.Feature<GeoJSON.Point, MapContextProperties> =>
+      feature.properties.kind === "city" && feature.geometry.type === "Point",
+  );
+
+  cityFeatures.forEach((feature) => {
+    new maplibregl.Marker({
+      element: createMapLabel(feature.properties.name, "city"),
+      offset: [0, 15],
+    })
+      .setLngLat(feature.geometry.coordinates as [number, number])
+      .addTo(map);
+  });
+
+  new maplibregl.Marker({
+    element: createMapLabel("Country boundary", "boundary"),
+    offset: [0, -12],
+  })
+    .setLngLat([-6.75, 10.45])
+    .addTo(map);
+}
+
+function createMapLabel(label: string, variant: "boundary" | "city") {
+  const element = document.createElement("div");
+  element.textContent = label;
+  element.style.pointerEvents = "none";
+  element.style.whiteSpace = "nowrap";
+  element.style.fontFamily =
+    'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  element.style.fontSize = variant === "boundary" ? "12px" : "11px";
+  element.style.fontWeight = variant === "boundary" ? "700" : "600";
+  element.style.color = variant === "boundary" ? "#d9e7ff" : "#dff8ec";
+  element.style.textShadow =
+    "0 1px 2px #07090d, 0 -1px 2px #07090d, 1px 0 2px #07090d, -1px 0 2px #07090d";
+  element.style.background =
+    variant === "boundary" ? "rgba(7, 9, 13, 0.68)" : "rgba(7, 9, 13, 0.48)";
+  element.style.border =
+    variant === "boundary" ? "1px dashed rgba(217, 231, 255, 0.7)" : "0";
+  element.style.borderRadius = "4px";
+  element.style.padding = variant === "boundary" ? "3px 6px" : "1px 4px";
+  return element;
 }
 
 function updateSource(map: MapLibreMap, id: string, data: GeoJSON.FeatureCollection) {
   const source = map.getSource(id) as GeoJSONSource | undefined;
   source?.setData(data);
+}
+
+function buildPopupHtml(kind: string, title: unknown, details: unknown[] = []) {
+  const safeDetails = details
+    .filter((detail): detail is string | number => {
+      return typeof detail === "string" || typeof detail === "number";
+    })
+    .map((detail) => `<em>${escapeHtml(String(detail))}</em>`)
+    .join("");
+
+  return `<div class="recon-popup"><span>${escapeHtml(kind)}</span><strong>${escapeHtml(
+    String(title ?? "Map feature"),
+  )}</strong>${safeDetails}</div>`;
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+    return entities[character];
+  });
 }
 
 function buildConcessionCollection(concessions: Concession[], selectedId: string) {
@@ -303,7 +573,7 @@ function buildConcessionCollection(concessions: Concession[], selectedId: string
 function buildRadius(concession: Concession) {
   const center = turf.centroid(concession.polygon);
   return turf.featureCollection([
-    turf.circle(center, 100, {
+    turf.circle(center, 150, {
       steps: 96,
       units: "kilometers",
       properties: { id: `${concession.id}-radius` },
@@ -322,6 +592,8 @@ function buildProjectCollection(projects: ProjectWithDistance[]) {
         project: project.project,
         ticker: project.ticker,
         distanceKm: project.distanceKm,
+        pinKind: getProjectPinKind(project),
+        pinLabel: getProjectPinLabel(project),
       },
       geometry: {
         type: "Point",
@@ -329,6 +601,31 @@ function buildProjectCollection(projects: ProjectWithDistance[]) {
       },
     })),
   } satisfies GeoJSON.FeatureCollection;
+}
+
+function getProjectPinKind(project: PublicCompanyProject) {
+  const text = `${project.company} ${project.project} ${project.exchange} ${project.commodities.join(" ")}`.toLowerCase();
+
+  if (/asm|artisanal|remote sensing|landsat|bandama|kokumbo/.test(text)) {
+    return "asm";
+  }
+
+  if (/sodemi|cadastre|ministry|government|geological survey/.test(text)) {
+    return "institutional";
+  }
+
+  return "project";
+}
+
+function getProjectPinLabel(project: PublicCompanyProject) {
+  switch (getProjectPinKind(project)) {
+    case "asm":
+      return "ASM / remote-sensing disturbance anchor";
+    case "institutional":
+      return "Government / geoscience source anchor";
+    default:
+      return "Public-company comparator";
+  }
 }
 
 function buildEvidenceCollection(
@@ -348,6 +645,9 @@ function buildEvidenceCollection(
           properties: {
             id: source.id,
             title: source.sourceTitle,
+            project: source.project,
+            company: source.company,
+            sourceType: source.sourceType.replaceAll("_", " "),
           },
           geometry: {
             type: "Point",

@@ -1,106 +1,96 @@
 [
   {
-    "id": "mmg-khoemacau",
-    "concessionId": "botswana-kalahari-copperbelt-demo",
-    "company": "MMG",
-    "ticker": "1208.HK",
-    "exchange": "HKEX",
-    "project": "Khoemacau Copper Mine",
-    "country": "BW",
-    "lat": -20.78,
-    "lng": 22.82,
-    "commodities": ["Cu", "Ag"],
-    "sourceUrls": ["https://www.mmg.com/our-business/khoemacau/", "https://www.mmg.com/media-release/mmg-to-acquire-khoemacau-copper-mine/"]
+    "id": "perseus-yaoure",
+    "concessionId": "ci-yaoure-kokumbo-aoi",
+    "company": "Perseus Mining",
+    "ticker": "PRU",
+    "exchange": "ASX/TSX",
+    "project": "Yaouré Mine",
+    "country": "CI",
+    "lat": 6.96,
+    "lng": -5.49,
+    "commodities": ["Au"],
+    "sourceUrls": [
+      "https://perseusmining.com/yaoure-mine/",
+      "https://perseusmining.com/exploration-organic-growth-pipeline/"
+    ]
   },
   {
-    "id": "sandfire-motheo",
-    "concessionId": "botswana-kalahari-copperbelt-demo",
-    "company": "Sandfire Resources",
-    "ticker": "SFR.AX",
-    "exchange": "ASX",
-    "project": "Motheo Copper Mine",
-    "country": "BW",
-    "lat": -21.25,
-    "lng": 25.0,
-    "commodities": ["Cu", "Ag"],
-    "sourceUrls": ["https://www.sandfire.com.au/where-we-operate/motheo/", "https://www.sandfire.com.au/2023/08/10/official-opening-of-the-motheo-copper-mine-2/"]
-  },
-  {
-    "id": "cobre-ngami",
-    "concessionId": "botswana-kalahari-copperbelt-demo",
-    "company": "Cobre",
-    "ticker": "CBE.AX",
-    "exchange": "ASX",
-    "project": "Ngami Copper Project",
-    "country": "BW",
-    "lat": -20.86,
-    "lng": 22.48,
-    "commodities": ["Cu", "Ag"],
-    "sourceUrls": ["https://www.cobre.com.au/ngami-project/", "https://www.cobre.com.au/wp-content/uploads/2024/10/CobreISCRProjectScopingStudyWithAppendices17Oct24.pdf"]
-  },
-  {
-    "id": "galileo-kalahari-copper-belt",
-    "concessionId": "botswana-kalahari-copperbelt-demo",
-    "company": "Galileo Resources",
-    "ticker": "GLR.L",
-    "exchange": "AIM",
-    "project": "Kalahari Copper Belt Project",
-    "country": "BW",
-    "lat": -21.55,
-    "lng": 23.7,
-    "commodities": ["Cu", "Ag"],
-    "sourceUrls": ["https://galileoresources.com/projects-operations/kalahari-copper-belt-project/", "https://galileoresources.com/projects-operations/"]
-  },
-  {
-    "id": "bannerman-etango",
-    "concessionId": "namibia-erongo-uranium-demo",
-    "company": "Bannerman Energy",
-    "ticker": "BMN.AX",
-    "exchange": "ASX",
-    "project": "Etango",
-    "country": "NA",
-    "lat": -22.67,
-    "lng": 15.42,
-    "commodities": ["U"],
-    "sourceUrls": ["https://bannermanenergy.com/namibia/overview/", "https://bannermanenergy.com/resource-and-reserves/"]
-  },
-  {
-    "id": "deep-yellow-tumas",
-    "concessionId": "namibia-erongo-uranium-demo",
-    "company": "Deep Yellow",
-    "ticker": "DYL.AX",
-    "exchange": "ASX",
-    "project": "Tumas",
-    "country": "NA",
-    "lat": -23.2,
-    "lng": 15.7,
-    "commodities": ["U"],
-    "sourceUrls": ["https://deepyellow.com.au/projects/namibia/tumas-project/", "https://deepyellow.com.au/projects/namibia/"]
-  },
-  {
-    "id": "paladin-langer-heinrich",
-    "concessionId": "namibia-erongo-uranium-demo",
-    "company": "Paladin Energy",
-    "ticker": "PDN.AX",
-    "exchange": "ASX",
-    "project": "Langer Heinrich Mine",
-    "country": "NA",
-    "lat": -22.8,
-    "lng": 15.33,
-    "commodities": ["U"],
-    "sourceUrls": ["https://www.paladinenergy.com/langer-heinrich-mine/", "https://www.globenewswire.com/news-release/2026/04/16/3275911/0/en/LHM-Guidance-Revision-Increase-FY2026-Production-Range.html"]
-  },
-  {
-    "id": "forsys-norasa",
-    "concessionId": "namibia-erongo-uranium-demo",
-    "company": "Forsys Metals",
-    "ticker": "FSY.TO",
+    "id": "allied-cdi-complex",
+    "concessionId": "ci-yaoure-kokumbo-aoi",
+    "company": "Allied Gold",
+    "ticker": "AAUC",
     "exchange": "TSX",
-    "project": "Norasa",
-    "country": "NA",
-    "lat": -22.36,
-    "lng": 15.78,
-    "commodities": ["U"],
-    "sourceUrls": ["https://www.forsysmetals.com/norasa", "https://www.globenewswire.com/fr/news-release/2024/05/14/2881227/0/en/Forsys-Reports-Updated-Mineral-Resource-Estimate-for-its-Norasa-Project-in-Namibia.html"]
+    "project": "Bonikro–Agbaou CDI Complex",
+    "country": "CI",
+    "lat": 6.25,
+    "lng": -5.55,
+    "commodities": ["Au"],
+    "sourceUrls": [
+      "https://alliedgold.com/our-portfolio/c-te-d-ivoire-complex/default.aspx",
+      "https://alliedgold.com/investor-relations/investor-news/news-details/2025/ALLIED-GOLD-REPORTS-SECOND-QUARTER-2025-RESULTS-SOLID-PRODUCTION-AND-PROGRESS-ON-GROWTH-PIPELINE/default.aspx"
+    ]
+  },
+  {
+    "id": "kokumbo-asm-study",
+    "concessionId": "ci-yaoure-kokumbo-aoi",
+    "company": "Scientific African",
+    "ticker": "DOI",
+    "exchange": "Public paper",
+    "project": "Kokumbo ASM Landsat Study Area",
+    "country": "CI",
+    "lat": 6.31,
+    "lng": -5.27,
+    "commodities": ["Au", "ASM"],
+    "sourceUrls": [
+      "https://www.sciencedirect.com/science/article/pii/S2468227625003928",
+      "https://doaj.org/article/5dc133d9bc5a4c7793fdd55ccdfd164b"
+    ]
+  },
+  {
+    "id": "bandama-asm-study",
+    "concessionId": "ci-yaoure-kokumbo-aoi",
+    "company": "International Journal of Applied Earth Observation and Geoinformation",
+    "ticker": "DOI",
+    "exchange": "Public paper",
+    "project": "Bandama River ASM Remote-Sensing Study",
+    "country": "CI",
+    "lat": 6.62,
+    "lng": -5.18,
+    "commodities": ["Au", "Remote sensing"],
+    "sourceUrls": [
+      "https://www.sciencedirect.com/science/article/pii/S1569843222000759"
+    ]
+  },
+  {
+    "id": "sodemi-geoscience",
+    "concessionId": "ci-yaoure-kokumbo-aoi",
+    "company": "SODEMI",
+    "ticker": "SODEMI",
+    "exchange": "Geological survey",
+    "project": "Côte d’Ivoire Geoscience Data",
+    "country": "CI",
+    "lat": 6.83,
+    "lng": -5.28,
+    "commodities": ["Geology", "Geophysics"],
+    "sourceUrls": [
+      "https://sodemi.ci/services/donnees-geoscientifiques/"
+    ]
+  },
+  {
+    "id": "ci-cadastre",
+    "concessionId": "ci-yaoure-kokumbo-aoi",
+    "company": "Ministry of Mines / Landfolio",
+    "ticker": "CAD",
+    "exchange": "Government portal",
+    "project": "Côte d’Ivoire Mining Cadastre",
+    "country": "CI",
+    "lat": 6.83,
+    "lng": -5.26,
+    "commodities": ["Cadastre"],
+    "sourceUrls": [
+      "https://energie.gouv.ci/actualite/gouvernance-miniere-le-ministere-des-mines-innove-avec-e-cadastre-minier-cote-divoire-68d19d95e5129",
+      "https://portals.landfolio.com/CoteDIvoire/en/"
+    ]
   }
 ]
