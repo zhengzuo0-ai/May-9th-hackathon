@@ -9,7 +9,7 @@
     "sourceTitle": "Yaouré Mine - Perseus Mining",
     "sourceType": "company_page",
     "retrievedAt": "2026-05-09",
-    "text": "Perseus describes Yaouré as an operating gold mine in central Côte d’Ivoire. For this AOI, Yaouré is a close public-company anchor rather than a far national analogue."
+    "text": "Perseus describes Yaouré as an operating gold mine in central Côte d’Ivoire. For this license package, Yaouré is a close public-company anchor rather than a far national analogue."
   },
   {
     "id": "perseus-yaoure-geology-pipeline",
@@ -33,7 +33,7 @@
     "sourceTitle": "Perseus - 3D Seismic Uncovers High Grade Resource Below Yaouré Mine",
     "sourceType": "technical_report",
     "retrievedAt": "2026-05-09",
-    "text": "Technical reference: HiSeis describes 3D seismic and 2D seismic work at Yaouré to test the down-dip extension of the CMA structure, map key structures, and identify drill targets. This is useful for geophysics and structural targeting logic near the AOI."
+    "text": "Technical reference: HiSeis describes 3D seismic and 2D seismic work at Yaouré to test the down-dip extension of the CMA structure, map key structures, and identify drill targets. This is useful for geophysics and structural targeting logic near the license package."
   },
   {
     "id": "allied-cdi-complex-overview",
@@ -45,7 +45,7 @@
     "sourceTitle": "Côte d’Ivoire Complex - Allied Gold",
     "sourceType": "company_page",
     "retrievedAt": "2026-05-09",
-    "text": "Allied Gold describes the CDI Complex as the Bonikro and Agbaou mills plus several open-pit deposits in a prospective Birimian gold belt. Bonikro and Agbaou are around 20 km apart, making this a close operating-complex comparable for the central AOI."
+    "text": "Allied Gold describes the CDI Complex as the Bonikro and Agbaou mills plus several open-pit deposits in a prospective Birimian gold belt. Bonikro and Agbaou are around 20 km apart, making this a close operating-complex comparable for the central license package."
   },
   {
     "id": "allied-cdi-exploration-2025",
@@ -69,7 +69,7 @@
     "sourceTitle": "Assessment of artisanal gold mining impacts using Landsat imagery",
     "sourceType": "research_paper",
     "retrievedAt": "2026-05-09",
-    "text": "Open-access remote-sensing paper: the Kokumbo sub-prefecture in central Côte d’Ivoire was studied with Landsat and machine-learning classification to assess artisanal gold mining impacts from 2013 to 2023. This is close AOI evidence for disturbance interpretation, not grade proof."
+    "text": "Open-access remote-sensing paper: the Kokumbo sub-prefecture in central Côte d’Ivoire was studied with Landsat and machine-learning classification to assess artisanal gold mining impacts from 2013 to 2023. This is close license package evidence for disturbance interpretation, not grade proof."
   },
   {
     "id": "kokumbo-asm-doaj-reference",
@@ -105,7 +105,7 @@
     "sourceTitle": "Recent expansion of artisanal gold mining along the Bandama River",
     "sourceType": "research_paper",
     "retrievedAt": "2026-05-09",
-    "text": "Open-access remote-sensing reference: this study documents rapid artisanal gold mining expansion in Côte d’Ivoire and shows that disturbance, pits, and land-cover change can be monitored from space. It supports the AOI’s remote-sensing workflow."
+    "text": "Open-access remote-sensing reference: this study documents rapid artisanal gold mining expansion in Côte d’Ivoire and shows that disturbance, pits, and land-cover change can be monitored from space. It supports the license package’s remote-sensing workflow."
   },
   {
     "id": "sodemi-ci-geoscientific-data",
@@ -129,7 +129,7 @@
     "sourceTitle": "The Mineral Industry of Côte d’Ivoire, 2017-18",
     "sourceType": "technical_report",
     "retrievedAt": "2026-05-09",
-    "text": "Government geoscience reference: the USGS Minerals Yearbook chapter provides a public-domain baseline for Côte d’Ivoire mineral production, policies, and facilities. It is country context, not direct AOI proof."
+    "text": "Government geoscience reference: the USGS Minerals Yearbook chapter provides a public-domain baseline for Côte d’Ivoire mineral production, policies, and facilities. It is country context, not direct license package proof."
   },
   {
     "id": "ci-ministry-ecadastre-launch",
@@ -153,7 +153,7 @@
     "sourceTitle": "Ivory Coast Mining Cadastre Map Portal",
     "sourceType": "company_page",
     "retrievedAt": "2026-05-09",
-    "text": "Cadastre reference: the Landfolio map portal is useful for checking tenure, permit boundaries, status, and overlaps around the AOI. Live portal attributes should be verified during diligence."
+    "text": "Cadastre reference: the Landfolio map portal is useful for checking tenure, permit boundaries, status, and overlaps around the license package. Live portal attributes should be verified during diligence."
   },
   {
     "id": "eiti-ci-license-cadastre",
@@ -165,7 +165,7 @@
     "sourceTitle": "Côte d’Ivoire - EITI",
     "sourceType": "company_page",
     "retrievedAt": "2026-05-09",
-    "text": "EITI reports that Côte d’Ivoire mining licenses are awarded through the Council of Ministers and that the mining cadastre is accessible online. This is governance and licensing context for the AOI."
+    "text": "EITI reports that Côte d’Ivoire mining licenses are awarded through the Council of Ministers and that the mining cadastre is accessible online. This is governance and licensing context for the license package."
   },
   {
     "id": "eiti-ci-2023-report",
@@ -189,7 +189,7 @@
     "sourceTitle": "Côte d’Ivoire deforestation rates and statistics - Global Forest Watch",
     "sourceType": "company_page",
     "retrievedAt": "2026-05-09",
-    "text": "Global Forest Watch provides forest-change dashboards and disturbance layers for Côte d’Ivoire. For this AOI it is a screening context layer for clearing and access, not standalone proof of mining or gold mineralization."
+    "text": "Global Forest Watch provides forest-change dashboards and disturbance layers for Côte d’Ivoire. For this license package it is a screening context layer for clearing and access, not standalone proof of mining or gold mineralization."
   },
   {
     "id": "world-bank-ci-asm-formalization",

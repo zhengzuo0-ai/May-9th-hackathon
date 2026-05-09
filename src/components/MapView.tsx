@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import maplibregl, { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import * as turf from "@turf/turf";
 import ciMapContext from "@/data/cote_divoire_map_context.json";
@@ -20,7 +20,15 @@ type MapViewProps = {
   selected: Concession;
   projects: ProjectWithDistance[];
   sources: SourcePack[];
+  focusProjectId?: string;
   onSelect: (id: string) => void;
+};
+
+type MapMode = "satellite" | "geology" | "admin";
+type LayerOpacity = {
+  satellite: number;
+  geology: number;
+  admin: number;
 };
 
 const style = {
@@ -32,17 +40,64 @@ const style = {
       tileSize: 256,
       attribution: "© OpenStreetMap contributors",
     },
+    satellite: {
+      type: "raster",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+      attribution:
+        "Tiles © Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+    },
+    geology: {
+      type: "image",
+      url: "/overlays/civ-geology-sems-map.jpg",
+      coordinates: [
+        [-8.55, 10.65],
+        [-1.86, 10.65],
+        [-1.86, 3.78],
+        [-8.55, 3.78],
+      ],
+    },
   },
   layers: [
     {
       id: "osm",
       type: "raster",
       source: "osm",
+      layout: {
+        visibility: "none",
+      },
       paint: {
+        "raster-opacity": 0.72,
         "raster-saturation": -0.25,
         "raster-contrast": 0.12,
         "raster-brightness-min": 0.08,
         "raster-brightness-max": 0.72,
+      },
+    },
+    {
+      id: "satellite",
+      type: "raster",
+      source: "satellite",
+      paint: {
+        "raster-opacity": 0.82,
+        "raster-saturation": -0.08,
+        "raster-contrast": 0.12,
+        "raster-brightness-min": 0,
+        "raster-brightness-max": 0.82,
+      },
+    },
+    {
+      id: "geology-overlay",
+      type: "raster",
+      source: "geology",
+      layout: {
+        visibility: "none",
+      },
+      paint: {
+        "raster-opacity": 0.62,
+        "raster-saturation": 0.05,
       },
     },
   ],
@@ -56,12 +111,19 @@ export default function MapView({
   selected,
   projects,
   sources,
+  focusProjectId,
   onSelect,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const onSelectRef = useRef(onSelect);
   const initialDataRef = useRef({ concessions, projects, selected, sources });
+  const [mapMode, setMapMode] = useState<MapMode>("satellite");
+  const [layerOpacity, setLayerOpacity] = useState<LayerOpacity>({
+    satellite: 0.82,
+    geology: 0.62,
+    admin: 0.72,
+  });
 
   useEffect(() => {
     onSelectRef.current = onSelect;
@@ -314,27 +376,41 @@ export default function MapView({
         new maplibregl.Popup()
           .setLngLat(event.lngLat)
           .setHTML(
-            buildPopupHtml("AOI", feature?.properties?.name, [
-              "Selected concession search area",
+            buildPopupHtml("License package", feature?.properties?.name, [
+              "Selected concessions",
               "Red polygon and blue dashed radius",
             ]),
           )
           .addTo(map);
       });
 
-      map.on("click", "project-pins", (event) => {
-        const feature = event.features?.[0];
-        if (!feature) return;
+      const showProjectPopup = (
+        lngLat: maplibregl.LngLatLike,
+        feature: maplibregl.MapGeoJSONFeature,
+      ) => {
         new maplibregl.Popup()
-          .setLngLat(event.lngLat)
+          .setLngLat(lngLat)
           .setHTML(
             buildPopupHtml("Public project", feature.properties?.project, [
               feature.properties?.company,
               feature.properties?.pinLabel,
-              `${feature.properties?.distanceKm}km from selected AOI`,
+              `${feature.properties?.distanceKm}km from selected package`,
+              feature.properties?.firstSourceUrl,
             ]),
           )
           .addTo(map);
+      };
+
+      map.on("click", "project-pins", (event) => {
+        const feature = event.features?.[0];
+        if (!feature) return;
+        showProjectPopup(event.lngLat, feature);
+      });
+
+      map.on("click", "project-rings", (event) => {
+        const feature = event.features?.[0];
+        if (!feature) return;
+        showProjectPopup(event.lngLat, feature);
       });
 
       map.on("click", "evidence-pins", (event) => {
@@ -346,6 +422,7 @@ export default function MapView({
             buildPopupHtml("Evidence source", feature.properties?.title, [
               feature.properties?.project,
               feature.properties?.sourceType,
+              feature.properties?.sourceUrl,
             ]),
           )
           .addTo(map);
@@ -378,11 +455,16 @@ export default function MapView({
       });
 
       bindHover("concession-fill", (feature) =>
-        buildPopupHtml("AOI", feature.properties?.name, [
-          "Selected concession search area",
+        buildPopupHtml("License package", feature.properties?.name, [
+          "Selected concessions",
         ]),
       );
       bindHover("project-pins", (feature) =>
+        buildPopupHtml("Public project", feature.properties?.project, [
+          feature.properties?.company,
+        ]),
+      );
+      bindHover("project-rings", (feature) =>
         buildPopupHtml("Public project", feature.properties?.project, [
           feature.properties?.company,
         ]),
@@ -411,6 +493,12 @@ export default function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map?.isStyleLoaded()) return;
+    applyMapMode(map, mapMode, layerOpacity);
+  }, [layerOpacity, mapMode]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map?.isStyleLoaded()) return;
 
     updateSource(map, "concessions", buildConcessionCollection(concessions, selected.id));
     updateSource(map, "radius", buildRadius(selected));
@@ -424,18 +512,139 @@ export default function MapView({
     });
   }, [concessions, projects, selected, sources]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map?.isStyleLoaded() || !focusProjectId) return;
+
+    const project = projects.find((item) => item.id === focusProjectId);
+    if (!project) return;
+
+    const lngLat: [number, number] = [project.lng, project.lat];
+    map.flyTo({ center: lngLat, zoom: Math.max(map.getZoom(), 8.2), duration: 700 });
+    new maplibregl.Popup()
+      .setLngLat(lngLat)
+      .setHTML(
+        buildPopupHtml("Map anchor", project.project, [
+          project.company,
+          getProjectPinLabel(project),
+          `${project.distanceKm}km from selected package`,
+          project.sourceUrls[0],
+        ]),
+      )
+      .addTo(map);
+  }, [focusProjectId, projects]);
+
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
-      <div className="pointer-events-none absolute right-4 top-4 grid gap-2 rounded border border-[#2a3140] bg-[#10141c]/90 px-3 py-2 text-[11px] text-[#d7deea] shadow-2xl backdrop-blur">
-        <MapLegendItem color="#d9e7ff" label="Country boundary" variant="line" />
-        <MapLegendItem color="#ff1f1f" label="Selected AOI" variant="line" />
-        <MapLegendItem color="#d98b4a" label="Public project" />
-        <MapLegendItem color="#22d3ee" label="ASM / disturbance" />
-        <MapLegendItem color="#4a90e2" label="Evidence source" />
-        <MapLegendItem color="#9fe3c4" label="City" />
+      <div className="absolute right-4 top-[252px] z-20 grid max-w-[230px] gap-2 rounded border border-[#2a3140] bg-[#10141c]/90 px-3 py-2 text-[11px] text-[#d7deea] shadow-2xl backdrop-blur">
+        <div className="grid grid-cols-3 gap-1">
+          {(["satellite", "geology", "admin"] as MapMode[]).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setMapMode(mode)}
+              className={`rounded border px-2 py-1 font-mono text-[10px] capitalize transition ${
+                mapMode === mode
+                  ? "border-[#f5c542] bg-[#f5c542]/15 text-[#ffe39b]"
+                  : "border-[#2a3140] bg-[#07090d]/70 text-[#9aa6b8] hover:border-[#4a90e2]"
+              }`}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+        <div className="grid gap-1">
+          <MapLegendItem color="#d9e7ff" label="Country boundary" variant="line" />
+          <MapLegendItem color="#ff1f1f" label="Selected package" variant="line" />
+          <MapLegendItem color="#d98b4a" label="Public project" />
+          <MapLegendItem color="#22d3ee" label="ASM / disturbance" />
+          <MapLegendItem color="#4a90e2" label="Evidence source" />
+          <MapLegendItem color="#9fe3c4" label="City" />
+        </div>
+        {mapMode === "geology" ? (
+          <p className="text-[10px] leading-4 text-[#ffd48a]">
+            SEMS/WAGP geology overlay is regional reference; use source reports for exact boundaries.
+          </p>
+        ) : null}
+        <div className="grid gap-2 border-t border-[#2a3140] pt-2">
+          <OpacitySlider
+            label="Satellite"
+            value={layerOpacity.satellite}
+            onChange={(value) =>
+              setLayerOpacity((current) => ({ ...current, satellite: value }))
+            }
+          />
+          <OpacitySlider
+            label="Geology"
+            value={layerOpacity.geology}
+            onChange={(value) =>
+              setLayerOpacity((current) => ({ ...current, geology: value }))
+            }
+          />
+          <OpacitySlider
+            label="Admin"
+            value={layerOpacity.admin}
+            onChange={(value) =>
+              setLayerOpacity((current) => ({ ...current, admin: value }))
+            }
+          />
+        </div>
       </div>
     </div>
+  );
+}
+
+function applyMapMode(map: MapLibreMap, mode: MapMode, layerOpacity: LayerOpacity) {
+  const visible = "visible";
+  const none = "none";
+
+  if (map.getLayer("osm")) {
+    map.setLayoutProperty("osm", "visibility", visible);
+    map.setPaintProperty(
+      "osm",
+      "raster-opacity",
+      mode === "admin" ? layerOpacity.admin : 0.28,
+    );
+  }
+
+  if (map.getLayer("satellite")) {
+    map.setLayoutProperty("satellite", "visibility", mode === "admin" ? none : visible);
+    map.setPaintProperty("satellite", "raster-opacity", layerOpacity.satellite);
+  }
+
+  if (map.getLayer("geology-overlay")) {
+    map.setLayoutProperty(
+      "geology-overlay",
+      "visibility",
+      mode === "geology" ? visible : none,
+    );
+    map.setPaintProperty("geology-overlay", "raster-opacity", layerOpacity.geology);
+  }
+}
+
+function OpacitySlider({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="grid grid-cols-[70px_1fr_34px] items-center gap-2 font-mono text-[10px] text-[#9aa6b8]">
+      <span>{label}</span>
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="h-1 accent-[#f5c542]"
+      />
+      <span className="text-right text-[#d7deea]">{Math.round(value * 100)}%</span>
+    </label>
   );
 }
 
@@ -534,7 +743,13 @@ function buildPopupHtml(kind: string, title: unknown, details: unknown[] = []) {
     .filter((detail): detail is string | number => {
       return typeof detail === "string" || typeof detail === "number";
     })
-    .map((detail) => `<em>${escapeHtml(String(detail))}</em>`)
+    .map((detail) => {
+      const value = String(detail);
+      if (/^https?:\/\//.test(value)) {
+        return `<a href="${escapeHtml(value)}" target="_blank" rel="noreferrer">Open source</a>`;
+      }
+      return `<em>${escapeHtml(value)}</em>`;
+    })
     .join("");
 
   return `<div class="recon-popup"><span>${escapeHtml(kind)}</span><strong>${escapeHtml(
@@ -594,6 +809,7 @@ function buildProjectCollection(projects: ProjectWithDistance[]) {
         distanceKm: project.distanceKm,
         pinKind: getProjectPinKind(project),
         pinLabel: getProjectPinLabel(project),
+        firstSourceUrl: project.sourceUrls[0],
       },
       geometry: {
         type: "Point",
@@ -648,6 +864,7 @@ function buildEvidenceCollection(
             project: source.project,
             company: source.company,
             sourceType: source.sourceType.replaceAll("_", " "),
+            sourceUrl: source.sourceUrl,
           },
           geometry: {
             type: "Point",

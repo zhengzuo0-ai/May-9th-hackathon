@@ -23,8 +23,10 @@ export function getNearbyProjects(
   projects: PublicCompanyProject[],
   radiusKm = DEFAULT_RECON_RADIUS_KM,
 ) {
+  const isRuntimeIntake = concession.id.startsWith("intake-");
+
   return projects
-    .filter((project) => project.concessionId === concession.id)
+    .filter((project) => isRuntimeIntake || project.concessionId === concession.id)
     .map((project) => ({
       ...project,
       distanceKm: Math.round(getProjectDistanceKm(concession, project)),

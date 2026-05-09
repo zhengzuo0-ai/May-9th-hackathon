@@ -79,11 +79,11 @@ function fallbackExpertRouteMarkdown(evidence: EvidenceItem[]) {
     highConfidence.length >= 2 ? "High" : evidence.length >= 2 ? "Medium" : "Low";
 
   return [
-    "## AOI Triage",
+    "## Package Triage",
     `Route: ${decision}`,
     `Confidence: ${confidence}`,
     "",
-    "## Why This AOI Is Interesting",
+    "## Why This Package Is Interesting",
     bullet(
       evidence.length > 0
         ? `The evidence stack contains ${evidence.length} source-backed item(s) from ${sourceCompanyCount} source company or organization(s).`
@@ -131,17 +131,17 @@ function fallbackExpertRouteMarkdown(evidence: EvidenceItem[]) {
     ),
     "",
     "## Missing Data",
-    bullet("The fallback thesis cannot prove mineralization inside the AOI from proximity alone."),
+    bullet("The fallback thesis cannot prove mineralization inside the license package from proximity alone."),
     bullet("Direct geology, geochemistry, geophysics, license standing, structural trend continuity, and field validation remain gating diligence items."),
     "",
     "## 30-Day Expert Workplan",
-    bullet("Geologist: verify AOI license status, local geology, shear-zone continuity, alteration, and same-trend target analogues against official maps and public technical reports."),
+    bullet("Geologist: verify package license status, local geology, shear-zone continuity, alteration, and same-trend target analogues against official maps and public technical reports."),
     bullet("Remote sensing: screen recent disturbance, pits, river impacts, access, and vegetation change before field mobilization."),
     bullet("Commercial: map counterparties, operator disclosures, cadence of news releases, and IR follow-up questions; separate same-trend comparables from distant regional analogues."),
     bullet("Field team: only after desktop triage, verify workings, access, and priority sample lines on the ground."),
     "",
     "## What Would Change The Route",
-    bullet("Upgrade if direct AOI drilling, geochemistry, geophysics, or visible workings corroborate the target."),
+    bullet("Upgrade if direct package drilling, geochemistry, geophysics, or visible workings corroborate the target."),
     bullet("Downgrade if cadastre checks, access constraints, or field inspection contradict the desktop evidence."),
   ]
     .filter(Boolean)

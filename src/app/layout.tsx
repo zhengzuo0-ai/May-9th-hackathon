@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "West Africa AOI Intelligence",
-  description: "GPT-5.5 and Exa-powered Côte d’Ivoire AOI intelligence workstation",
+  title: "West Africa License Recon",
+  description: "GPT-5.5 and Exa-powered Côte d’Ivoire license-package intelligence workstation",
 };
 
 export default function RootLayout({

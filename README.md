@@ -1,6 +1,6 @@
-# West Africa AOI Intelligence
+# West Africa License Recon
 
-West Africa AOI Intelligence turns a selected Côte d'Ivoire exploration AOI into a map-backed evidence stack, shared research library, and GPT-5.5-assisted expert review route. The current demo focuses on the tighter Yaouré–Kokumbo central Côte d'Ivoire cluster, where public-company, government, geological-survey, institutional, and research-paper evidence is close enough to be useful. Evidence is weighted by geological relationship: a project or paper on the same shear zone, structural corridor, or mineralized trend matters more than raw distance alone.
+West Africa License Recon turns a small Côte d'Ivoire license package into a map-backed public evidence stack, shared research library, and GPT-5.5-assisted expert review route. The current demo focuses on three Yaouré–Kokumbo package blocks, using nearby public-company, government, geological-survey, institutional, remote-sensing, ASM, and research-paper evidence. Evidence is weighted by geological relationship: a project or paper on the same shear zone, structural corridor, or mineralized trend matters more than raw distance alone.
 
 ## Local Run
 
@@ -13,11 +13,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Demo Path
 
-1. Select the Côte d'Ivoire Yaouré-Kokumbo AOI.
-2. Review the map layers for public projects, source packs, remote sensing, ASM/pits, geology/structure, same-trend context, cities, and data gaps.
+1. Select the Côte d'Ivoire Yaouré-Kokumbo license package.
+2. Review the map layers for public projects, source packs, satellite imagery, SEMS/WAGP geology, ASM/pits, same-trend context, cities, and data gaps.
 3. Use the **Research Library / Data Room** rows to brief Geologist, Remote Sensing, and Commercial teams from the same evidence pack.
-4. Click **Run AOI Recon**.
-5. Read the **AOI Triage** and **Expert Review Route**.
+4. Click **Run License Recon**.
+5. Read the **Package Triage** and **Expert Review Route**.
 
 ## Environment Variables
 

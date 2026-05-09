@@ -5,7 +5,7 @@ export type Concession = {
   name: string;
   country: CountryCode;
   center: [number, number];
-  polygon: GeoJSON.Polygon;
+  polygon: GeoJSON.Polygon | GeoJSON.MultiPolygon;
 };
 
 export type PublicCompanyProject = {

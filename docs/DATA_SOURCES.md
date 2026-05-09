@@ -1,10 +1,10 @@
 # Data Sources
 
-Demo AOI, company and source-pack data is curated from public mining company pages, public papers, technical references, and official transparency or monitoring portals. Synthetic source URLs are intentionally not used.
+Demo license-package, company and source-pack data is curated from public mining company pages, public papers, technical references, and official transparency or monitoring portals. Synthetic source URLs are intentionally not used.
 
-## Côte d’Ivoire Yaouré–Kokumbo AOI
+## Côte d’Ivoire Yaouré–Kokumbo License Package
 
-This target is intentionally tighter than the earlier country-wide screen. The Data Room emphasizes sources around central Côte d’Ivoire: Yaouré, Kokumbo, the Bandama disturbance corridor, Bonikro–Agbaou, SODEMI geoscience data, and cadastre / governance references.
+This package is intentionally tighter than the earlier country-wide screen. The Data Room emphasizes sources around central Côte d’Ivoire: Yaouré, Kokumbo, the Bandama disturbance corridor, Bonikro–Agbaou, SODEMI geoscience data, SEMS/WAGP geology, and cadastre / governance references.
 
 ### Geologist
 

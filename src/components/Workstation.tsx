@@ -12,9 +12,11 @@ import {
   Landmark,
   Loader2,
   MapPin,
+  Play,
   RadioTower,
   ShieldCheck,
   Target,
+  Upload,
   XCircle,
 } from "lucide-react";
 import MapView from "@/components/MapView";
@@ -46,8 +48,46 @@ type SourceCard = {
   categoryLabel: string;
   roles: DataRoomRole[];
 };
+type StaticDemo = {
+  id: string;
+  label: string;
+  meta: string;
+  concession: Concession;
+};
+
+const intakeSeed = {
+  lat: 6.55,
+  lng: -5.05,
+  name: "Sample point: Yamoussoukro",
+};
+const intakeSeedText = JSON.stringify(intakeSeed, null, 2);
+const staticDemos: StaticDemo[] = [
+  {
+    id: "static-package",
+    label: "Static Result 1",
+    meta: "3-license Yaouré–Kokumbo package",
+    concession: concessions[0],
+  },
+  {
+    id: "static-point",
+    label: "Static Result 2",
+    meta: "Coordinate intake result",
+    concession: buildPointConcession(
+      "intake-static-yamoussoukro",
+      "Static Yamoussoukro Point Result",
+      [-5.05, 6.55],
+    ),
+  },
+];
 
 export default function Workstation() {
+  const [runtimeConcessions, setRuntimeConcessions] = useState<Concession[]>([
+    staticDemos[1].concession,
+  ]);
+  const availableConcessions = useMemo(
+    () => [...concessions, ...runtimeConcessions],
+    [runtimeConcessions],
+  );
   const [selectedId, setSelectedId] = useState(concessions[0].id);
   const [reconStep, setReconStep] = useState<ReconStep>("idle");
   const [liveEvidence, setLiveEvidence] = useState<EvidenceItem[]>([]);
@@ -55,22 +95,31 @@ export default function Workstation() {
   const [reconError, setReconError] = useState("");
   const [dataRoomRole, setDataRoomRole] = useState<DataRoomRole>("all");
   const [evidenceFilter, setEvidenceFilter] = useState<EvidenceFilter>("all");
-  const selected = concessions.find((item) => item.id === selectedId) ?? concessions[0];
+  const [focusedProjectId, setFocusedProjectId] = useState<string>();
+  const [intakeText, setIntakeText] = useState(intakeSeedText);
+  const [intakeError, setIntakeError] = useState("");
+  const selected =
+    availableConcessions.find((item) => item.id === selectedId) ?? concessions[0];
+  const isRuntimePackage = selected.id.startsWith("intake-");
 
   const nearbyProjects = useMemo(
     () => getNearbyProjects(selected, projects),
     [selected],
   );
 
-  const selectedSources = sourcePacks.filter(
+  const selectedSourcesRaw = sourcePacks.filter(
     (source) => source.concessionId === selected.id,
   );
+  const selectedSources =
+    selectedSourcesRaw.length > 0 ? selectedSourcesRaw : sourcePacks;
 
   const closestMapAnchor = nearbyProjects[0];
   const selectedCommoditySet = new Set(
     nearbyProjects.flatMap((project) => project.commodities),
   );
-  const commodityTape = Array.from(selectedCommoditySet).join(" / ");
+  const commodityTape = selectedCommoditySet.has("Au")
+    ? "Au + public data package"
+    : `${Array.from(selectedCommoditySet).slice(0, 2).join(" / ") || "Multi"} package`;
   const isReconRunning = reconStep === "extracting" || reconStep === "committee";
   const evidenceItems = liveEvidence.length > 0 ? liveEvidence : selectedSources.map(sourcePackToEvidence);
   const sourceCards = useMemo(
@@ -134,6 +183,61 @@ export default function Workstation() {
     setReconError("");
     setDataRoomRole("all");
     setEvidenceFilter("all");
+    setFocusedProjectId(undefined);
+  }
+
+  function activateStaticDemo(concession: Concession) {
+    if (concession.id.startsWith("intake-")) {
+      setRuntimeConcessions((current) => upsertConcession(current, concession));
+    }
+    selectConcession(concession.id);
+  }
+
+  async function loadIntakeFile(file?: File) {
+    if (!file) return;
+    setIntakeText(await file.text());
+    setIntakeError("");
+  }
+
+  function runIntake() {
+    try {
+      const concession = parseIntakeConcession(intakeText);
+      setRuntimeConcessions((current) => upsertConcession(current, concession));
+      selectConcession(concession.id);
+      setIntakeError("");
+    } catch (error) {
+      setIntakeError(error instanceof Error ? error.message : "Could not parse intake JSON");
+    }
+  }
+
+  function activateCoverageLayer(label: string) {
+    switch (label) {
+      case "Map anchors":
+        setDataRoomRole("commercial");
+        setEvidenceFilter("all");
+        setFocusedProjectId(nearbyProjects[0]?.id);
+        break;
+      case "Source packs":
+        setDataRoomRole("all");
+        setEvidenceFilter("all");
+        break;
+      case "Remote sensing":
+        setDataRoomRole("remote");
+        setEvidenceFilter("remote_sensing");
+        break;
+      case "ASM / pits":
+        setDataRoomRole("remote");
+        setEvidenceFilter("asm_activity");
+        break;
+      case "Geology / structure":
+        setDataRoomRole("geology");
+        setEvidenceFilter("all");
+        break;
+      case "Data gaps":
+        setDataRoomRole("institutional");
+        setEvidenceFilter("license_activity");
+        break;
+    }
   }
 
   async function runRecon() {
@@ -196,10 +300,11 @@ export default function Workstation() {
     <main className="flex h-screen min-w-[1024px] overflow-hidden bg-[#07090d] text-[#f4f7fb]">
       <section className="relative h-full min-w-0 basis-[68%] border-r border-[#2a3140]">
         <MapView
-          concessions={concessions}
+          concessions={availableConcessions}
           selected={selected}
           projects={nearbyProjects}
           sources={selectedSources}
+          focusProjectId={focusedProjectId}
           onSelect={selectConcession}
         />
         <div className="absolute left-4 right-4 top-4 z-10 max-w-[760px]">
@@ -210,12 +315,12 @@ export default function Workstation() {
                   Public + Remote Evidence Analyst
                 </p>
                 <h1 className="mt-1 text-[20px] font-bold leading-6 text-[#f4f7fb]">
-                  West Africa AOI Intelligence
+                  West Africa License Recon
                 </h1>
               </div>
               <div className={`shrink-0 rounded-md border px-3 py-2 text-center ${decisionTone}`}>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.04em]">
-                  AOI Triage
+                  Package Triage
                 </p>
                 <p className="text-sm font-bold">{liveRoute}</p>
               </div>
@@ -226,7 +331,7 @@ export default function Workstation() {
                   {selected.name}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-[#b7c0d0]">
-                  {selected.country} AOI under 150km focused public + remote evidence scan.
+                  {selected.country} license package with 150km public + remote evidence scan.
                   {closestMapAnchor
                     ? ` Closest map anchor: ${closestMapAnchor.project}.`
                     : " No public comparator loaded."}
@@ -238,10 +343,30 @@ export default function Workstation() {
                 <MapStat label="Sources" value={selectedSources.length.toString()} />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-2 border-t border-[#2a3140] px-4 py-3">
+              {staticDemos.map((demo) => (
+                <button
+                  key={demo.id}
+                  onClick={() => activateStaticDemo(demo.concession)}
+                  className={`min-w-0 rounded-md border px-3 py-2 text-left transition ${
+                    selected.id === demo.concession.id
+                      ? "border-[#f5c542] bg-[#f5c542]/15"
+                      : "border-[#2a3140] bg-[#07090d]/70 hover:border-[#4a90e2]"
+                  }`}
+                >
+                  <span className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#f5c542]">
+                    {demo.label}
+                  </span>
+                  <span className="mt-1 block truncate text-xs text-[#d5dbea]">
+                    {demo.meta}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <div className="absolute bottom-4 left-4 z-10 flex max-w-[520px] flex-wrap gap-2">
-          <MapLegend color="#ff1f1f" label="Red: selected AOI" />
+          <MapLegend color="#ff1f1f" label="Red: selected license package" />
           <MapLegend color="#d98b4a" label="Orange: public project" />
           <MapLegend color="#22d3ee" label="Cyan: ASM / disturbance" />
           <MapLegend color="#4a90e2" label="Blue: cited source" />
@@ -250,40 +375,87 @@ export default function Workstation() {
 
       <aside className="flex h-full min-w-[390px] basis-[32%] flex-col overflow-y-auto bg-[#10141c]">
         <div className="border-b border-[#2a3140] px-4 py-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="grid gap-2">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#8c96a8]">
-                Selected AOI
+                Selected Package
               </p>
               <p className="mt-1 truncate text-sm font-semibold text-[#f4f7fb]">
                 {selected.name}
               </p>
             </div>
-            <span className="shrink-0 rounded border border-[#4a90e2]/40 bg-[#4a90e2]/10 px-2 py-1 font-mono text-xs text-[#9cc6ff]">
+            <span className="w-fit max-w-full rounded border border-[#4a90e2]/40 bg-[#4a90e2]/10 px-2 py-1 font-mono text-xs leading-5 text-[#9cc6ff]">
               {commodityTape || "Multi"} district
             </span>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {concessions.map((concession) => (
-              <button
-                key={concession.id}
-                onClick={() => selectConcession(concession.id)}
-                className={`min-w-0 rounded-lg border px-3 py-2 text-left text-sm transition ${
-                  selected.id === concession.id
-                    ? "border-[#f5c542] bg-[#f5c542]/15 text-[#f5c542]"
-                    : "border-[#2a3140] bg-[#171c26] text-[#d5dbea] hover:border-[#4a90e2]"
-                }`}
-              >
-                <span className="block truncate font-semibold">{concession.name}</span>
-                <span className="mt-1 block font-mono text-xs text-[#8c96a8]">
-                  {concession.country} / 150km recon
-                </span>
-              </button>
-            ))}
+          <div className="mt-3 rounded-md border border-[#2a3140] bg-[#171c26] px-3 py-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold text-[#f4f7fb]">
+                {isRuntimePackage ? "Live Coordinate Intake" : "Static Result"}
+              </span>
+              <span className="shrink-0 rounded border border-[#2a3140] px-2 py-1 font-mono text-[11px] text-[#8c96a8]">
+                {isRuntimePackage ? "runtime" : "cached"}
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] leading-4 text-[#8c96a8]">
+              Use the two Static Result buttons in the map header for prepared demos;
+              use Live Intake below when someone sends a coordinate or license JSON.
+            </p>
           </div>
         </div>
 
         <div className="space-y-3 p-4">
+          <section className="workstation-panel border border-[#2a3140] bg-[#171c26]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <Upload size={16} className="shrink-0 text-[#22c55e]" />
+                <h2 className="truncate text-sm font-semibold">Live Intake</h2>
+              </div>
+              <span className="shrink-0 font-mono text-xs text-[#8c96a8]">
+                point / polygon JSON
+              </span>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-[#8c96a8]">
+              Paste a coordinate, GeoJSON Point, Polygon, or MultiPolygon. A point becomes a
+              small license-style package and reuses the public-source recon workflow.
+            </p>
+            <textarea
+              value={intakeText}
+              onChange={(event) => setIntakeText(event.target.value)}
+              spellCheck={false}
+              className="mt-3 h-28 w-full resize-none rounded-md border border-[#2a3140] bg-[#07090d] px-3 py-2 font-mono text-xs leading-5 text-[#d5dbea] outline-none transition focus:border-[#22c55e]"
+            />
+            {intakeError ? (
+              <div className="mt-2 rounded-md border border-[#ef4444]/40 bg-[#ef4444]/10 px-3 py-2 text-xs text-[#fecaca]">
+                {intakeError}
+              </div>
+            ) : null}
+            <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-[#2a3140] bg-[#10141c] px-3 py-2 text-xs text-[#b7c0d0] transition hover:border-[#4a90e2]">
+                <Upload size={13} />
+                Upload JSON
+                <input
+                  type="file"
+                  accept=".json,application/json,geo+json,.geojson"
+                  className="hidden"
+                  onChange={(event) => void loadIntakeFile(event.target.files?.[0])}
+                />
+              </label>
+              <button
+                onClick={runIntake}
+                className="flex items-center justify-center gap-2 rounded-md bg-[#22c55e] px-3 py-2 text-xs font-semibold text-[#07120a] transition hover:bg-[#86efac]"
+              >
+                <Play size={13} />
+                Create package
+              </button>
+            </div>
+            {isRuntimePackage ? (
+              <div className="mt-3 rounded-md border border-[#22c55e]/30 bg-[#22c55e]/10 px-3 py-2 text-xs leading-5 text-[#a7f3d0]">
+                Runtime package active. Press Run License Recon to classify the evidence
+                pack and draft the expert route.
+              </div>
+            ) : null}
+          </section>
           <button
             onClick={runRecon}
             disabled={isReconRunning}
@@ -294,7 +466,7 @@ export default function Workstation() {
             ) : (
               <FileSearch size={16} />
             )}
-            {isReconRunning ? "Running AOI Recon" : "Run AOI Recon"}
+            {isReconRunning ? "Running License Recon" : "Run License Recon"}
           </button>
           {reconError ? (
             <div className="rounded-md border border-[#ef4444]/40 bg-[#ef4444]/10 px-3 py-2 text-xs leading-5 text-[#fecaca]">
@@ -315,8 +487,8 @@ export default function Workstation() {
             <div className="mt-3 grid gap-2">
               <PinGuide
                 color="#ff1f1f"
-                label="Red AOI"
-                text="The concession being triaged by this panel."
+                label="Red license package"
+                text="Three small concessions being triaged by this panel."
               />
               <PinGuide
                 color="#d98b4a"
@@ -334,6 +506,20 @@ export default function Workstation() {
                 text="A citation-backed evidence point from the Data Room."
               />
             </div>
+            <a
+              href="https://portals.landfolio.com/CoteDIvoire/en/"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 flex items-center justify-between gap-3 rounded-md border border-[#4a90e2]/35 bg-[#4a90e2]/10 px-3 py-2 text-xs text-[#b9dcff] transition hover:border-[#4a90e2]"
+            >
+              <span className="min-w-0">
+                <span className="block font-semibold">Open mining cadastre</span>
+                <span className="mt-0.5 block text-[11px] leading-4 text-[#8c96a8]">
+                  Live Landfolio portal for title / overlap verification
+                </span>
+              </span>
+              <ExternalLink size={13} className="shrink-0" />
+            </a>
             <div className="mt-3 rounded-md border border-[#f5c542]/30 bg-[#f5c542]/10 px-3 py-2 text-xs leading-5 text-[#ffe39b]">
               Same shear zone or mineralized trend fit carries more weight than raw distance;
               kilometers only rank where to inspect first.
@@ -352,9 +538,10 @@ export default function Workstation() {
             </div>
             <div className="mt-3 grid gap-2">
               {layerStack.map((layer) => (
-                <div
+                <button
                   key={layer.label}
-                  className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-md border border-[#2a3140] bg-[#10141c] px-3 py-2"
+                  onClick={() => activateCoverageLayer(layer.label)}
+                  className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-md border border-[#2a3140] bg-[#10141c] px-3 py-2 text-left transition hover:border-[#4a90e2] hover:bg-[#121824]"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold text-[#f4f7fb]">
@@ -367,7 +554,7 @@ export default function Workstation() {
                   <span className={`rounded border px-2 py-1 font-mono text-xs ${layer.tone}`}>
                     {layer.value}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           </section>
@@ -456,7 +643,7 @@ export default function Workstation() {
               ))}
               {filteredSourceCards.length === 0 ? (
                 <div className="bg-[#10141c] px-3 py-3 text-xs text-[#8c96a8]">
-                  No sources in this role for the selected AOI.
+                  No sources in this role for the selected package.
                 </div>
               ) : null}
             </div>
@@ -514,9 +701,14 @@ export default function Workstation() {
             </p>
             <div className="mt-3 space-y-2">
               {nearbyProjects.map((project) => (
-                <div
+                <button
                   key={project.id}
-                  className="rounded-md border border-[#2a3140] bg-[#10141c] px-3 py-2"
+                  onClick={() => setFocusedProjectId(project.id)}
+                  className={`w-full rounded-md border px-3 py-2 text-left transition hover:border-[#4a90e2] hover:bg-[#121824] ${
+                    focusedProjectId === project.id
+                      ? "border-[#f5c542]/70 bg-[#f5c542]/10"
+                      : "border-[#2a3140] bg-[#10141c]"
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -539,7 +731,7 @@ export default function Workstation() {
                       </span>
                     ))}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </section>
@@ -635,7 +827,7 @@ export default function Workstation() {
               </div>
               <div className={`shrink-0 rounded-md border px-3 py-2 text-center ${decisionTone}`}>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.04em]">
-                  AOI Triage
+                  Package Triage
                 </p>
                 <p className="text-base font-bold">{liveRoute}</p>
               </div>
@@ -667,7 +859,7 @@ export default function Workstation() {
                 />
                 <MemoRow
                   label="Missing Data"
-                  text="Confirm tenure status, local geology, structure, target access, and whether disclosed mineralized trends plausibly continue into the AOI."
+                  text="Confirm tenure status, local geology, structure, target access, and whether disclosed mineralized trends plausibly continue into the package."
                 />
                 <MemoRow
                   label="30-Day Expert Workplan"
@@ -680,7 +872,7 @@ export default function Workstation() {
                 <AlertTriangle size={15} className="mt-0.5 shrink-0 text-[#f5c542]" />
                 <p className="text-xs leading-5 text-[#ffd48a]">
                   AI triage is not a final decision. Prioritize only after expert
-                  review ties title, geology, remote evidence, and field checks to the selected AOI.
+                  review ties title, geology, remote evidence, and field checks to the selected package.
                 </p>
               </div>
             </div>
@@ -702,6 +894,145 @@ function MapStat({ label, value }: { label: string; value: string }) {
       </p>
     </div>
   );
+}
+
+function upsertConcession(items: Concession[], concession: Concession) {
+  const existingIndex = items.findIndex((item) => item.id === concession.id);
+  if (existingIndex === -1) return [...items, concession];
+
+  const next = [...items];
+  next[existingIndex] = concession;
+  return next;
+}
+
+function parseIntakeConcession(raw: string): Concession {
+  const parsed = JSON.parse(raw) as unknown;
+  const geometry = extractGeometry(parsed);
+  const name = extractName(parsed) ?? "Live intake package";
+  const id = `intake-${slugify(name)}`;
+
+  if (geometry.type === "Point") {
+    return buildPointConcession(id, name, geometry.coordinates as [number, number]);
+  }
+
+  if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
+    return {
+      id,
+      name,
+      country: "CI",
+      center: getGeometryCenter(geometry),
+      polygon: geometry,
+    };
+  }
+
+  throw new Error("Use a Point, Polygon, MultiPolygon, or { lat, lng } JSON object.");
+}
+
+function extractGeometry(input: unknown): GeoJSON.Geometry {
+  if (!isRecord(input)) {
+    throw new Error("Input must be a JSON object.");
+  }
+
+  if (input.type === "Feature" && isRecord(input.geometry)) {
+    return input.geometry as unknown as GeoJSON.Geometry;
+  }
+
+  if (
+    (input.type === "Point" || input.type === "Polygon" || input.type === "MultiPolygon") &&
+    Array.isArray(input.coordinates)
+  ) {
+    return input as unknown as GeoJSON.Geometry;
+  }
+
+  const lng = numberField(input, ["lng", "lon", "longitude"]);
+  const lat = numberField(input, ["lat", "latitude"]);
+  if (lng !== undefined && lat !== undefined) {
+    return { type: "Point", coordinates: [lng, lat] };
+  }
+
+  if (Array.isArray(input.point) && input.point.length >= 2) {
+    const [first, second] = input.point;
+    if (typeof first === "number" && typeof second === "number") {
+      return { type: "Point", coordinates: [first, second] };
+    }
+  }
+
+  throw new Error("Expected { lat, lng }, GeoJSON Point, Polygon, or MultiPolygon.");
+}
+
+function extractName(input: unknown) {
+  if (!isRecord(input)) return undefined;
+  if (typeof input.name === "string" && input.name.trim()) return input.name.trim();
+  if (isRecord(input.properties) && typeof input.properties.name === "string") {
+    return input.properties.name.trim();
+  }
+  return undefined;
+}
+
+function buildPointConcession(
+  id: string,
+  name: string,
+  [lng, lat]: [number, number],
+): Concession {
+  return {
+    id,
+    name,
+    country: "CI",
+    center: [lng, lat],
+    polygon: {
+      type: "MultiPolygon",
+      coordinates: [
+        rectangle(lng - 0.09, lat - 0.06, lng + 0.05, lat + 0.04),
+        rectangle(lng + 0.08, lat - 0.02, lng + 0.18, lat + 0.07),
+        rectangle(lng - 0.03, lat + 0.10, lng + 0.06, lat + 0.17),
+      ],
+    },
+  };
+}
+
+function rectangle(west: number, south: number, east: number, north: number) {
+  return [[[west, south], [east, south], [east, north], [west, north], [west, south]]];
+}
+
+function getGeometryCenter(geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon): [number, number] {
+  const points = flattenCoordinates(geometry.coordinates);
+  const lngs = points.map(([lng]) => lng);
+  const lats = points.map(([, lat]) => lat);
+  return [
+    (Math.min(...lngs) + Math.max(...lngs)) / 2,
+    (Math.min(...lats) + Math.max(...lats)) / 2,
+  ];
+}
+
+function flattenCoordinates(value: unknown): [number, number][] {
+  if (!Array.isArray(value)) return [];
+  if (
+    value.length >= 2 &&
+    typeof value[0] === "number" &&
+    typeof value[1] === "number"
+  ) {
+    return [[value[0], value[1]]];
+  }
+  return value.flatMap((item) => flattenCoordinates(item));
+}
+
+function numberField(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    if (typeof record[key] === "number") return record[key];
+    if (typeof record[key] === "string" && record[key].trim()) {
+      const value = Number(record[key]);
+      if (Number.isFinite(value)) return value;
+    }
+  }
+  return undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function slugify(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "package";
 }
 
 function MapLegend({ color, label }: { color: string; label: string }) {
@@ -1026,7 +1357,7 @@ function getTimelineItems(
       status: "done" as TimelineStatus,
     },
     {
-      label: "Classifying AOI evidence",
+      label: "Classifying package evidence",
       meta: step === "idle" ? `${sourceCount} sources` : `${evidenceCount} evidence items`,
       status: extractionStatus,
     },

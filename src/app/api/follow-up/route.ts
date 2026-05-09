@@ -76,8 +76,8 @@ function fallbackFollowUp(question: string, evidence: EvidenceItem[]) {
         ...topEvidence.map(
           (item) => `- ${item.summary} Source: ${item.sourceTitle}.`,
         ),
-        "- Confirm AOI license status and boundaries against official cadastre records.",
-        "- Separate direct AOI evidence from nearby comparable evidence before upgrading the triage route.",
+        "- Confirm package license status and boundaries against official cadastre records.",
+        "- Separate direct package evidence from nearby comparable evidence before upgrading the triage route.",
       ].join("\n");
     case "Which layer is weakest?":
       return [
@@ -96,14 +96,14 @@ function fallbackFollowUp(question: string, evidence: EvidenceItem[]) {
     case "What is the 30-day field plan?":
       return [
         "30-day field + data plan:",
-        "- Week 1: verify cadastre status, AOI coordinates, access, and public-company comparable locations.",
+        "- Week 1: verify cadastre status, package coordinates, access, and public-company comparable locations.",
         "- Week 2: interpret remote-sensing disturbance, ASM/workings, drainage, and structural targets.",
         "- Week 3: field-check priority sites, collect reconnaissance samples, and log access constraints.",
         "- Week 4: reconcile assay/geology observations with public evidence and update the PRIORITIZE / WATCH / DEFER triage route.",
       ].join("\n");
     default:
       return [
-        "I can answer from the extracted AOI evidence once an OpenAI API key is configured.",
+        "I can answer from the extracted package evidence once an OpenAI API key is configured.",
         "",
         ...topEvidence.map((item) => `- ${item.summary} Source: ${item.sourceTitle}.`),
       ].join("\n");
