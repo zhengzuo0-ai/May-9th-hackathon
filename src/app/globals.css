@@ -1,26 +1,117 @@
 @import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #07090d;
+  --foreground: #f4f7fb;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  min-width: 1024px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.workstation-panel {
+  border-radius: 8px;
+  padding: 16px;
+}
+
+a,
+button,
+p,
+span,
+strong {
+  overflow-wrap: anywhere;
+}
+
+aside {
+  scrollbar-color: #2a3140 #10141c;
+  scrollbar-width: thin;
+}
+
+aside::-webkit-scrollbar {
+  width: 10px;
+}
+
+aside::-webkit-scrollbar-track {
+  background: #10141c;
+}
+
+aside::-webkit-scrollbar-thumb {
+  background: #2a3140;
+  border: 2px solid #10141c;
+  border-radius: 999px;
+}
+
+.maplibregl-ctrl-bottom-left .maplibregl-ctrl {
+  margin: 0 0 14px 14px;
+}
+
+.maplibregl-ctrl-attrib {
+  background: #10141ce6;
+  border: 1px solid #2a3140;
+  color: #8c96a8;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: #9cc6ff;
+}
+
+.maplibregl-popup-content {
+  background: #10141c;
+  border: 1px solid #2a3140;
+  border-radius: 8px;
+  color: #f4f7fb;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 45%);
+  max-width: 240px;
+  padding: 0;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: #10141c;
+}
+
+.maplibregl-popup-close-button {
+  color: #8c96a8;
+  font-size: 16px;
+  padding: 4px 7px;
+}
+
+.recon-popup {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.recon-popup strong {
+  color: #f5c542;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.recon-popup span {
+  color: #f4f7fb;
+  font-size: 12px;
+}
+
+.recon-popup em {
+  color: #8c96a8;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-style: normal;
 }
