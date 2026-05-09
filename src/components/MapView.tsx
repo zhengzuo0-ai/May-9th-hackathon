@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+  type WheelEvent,
+} from "react";
 import type { Concession, PublicCompanyProject, SourcePack } from "@/lib/types";
 
 type ProjectWithDistance = PublicCompanyProject & { distanceKm: number };
@@ -30,6 +36,13 @@ type MapCard =
       meta: string;
       href: string;
     };
+type DragState = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  panX: number;
+  panY: number;
+};
 
 const mapBounds = {
   west: -8.55,
@@ -37,6 +50,10 @@ const mapBounds = {
   north: 10.65,
   south: 3.78,
 };
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 8;
+const ZOOM_STEP = 0.6;
+const FOCUS_ZOOM = 4.2;
 
 const cities = [
   { name: "Abidjan", role: "Commercial hub", lng: -4.03, lat: 5.35 },
@@ -53,9 +70,13 @@ export default function MapView({
   focusProjectId,
   onSelect,
 }: MapViewProps) {
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<DragState | null>(null);
   const [mapMode, setMapMode] = useState<MapMode>("satellite");
   const [controlsOpen, setControlsOpen] = useState(true);
   const [mapCard, setMapCard] = useState<MapCard | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
   const [opacity, setOpacity] = useState({
     satellite: 0.86,
     geology: 0.58,
@@ -66,129 +87,208 @@ export default function MapView({
     [projects, sources],
   );
 
+  function zoomBy(delta: number) {
+    setZoom((current) => clampZoom(current + delta));
+  }
+
+  function resetView() {
+    dragRef.current = null;
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }
+
+  function focusPackage() {
+    const mapRect = mapRef.current?.getBoundingClientRect();
+    const [x, y] = projectPoint(selected.center[0], selected.center[1]);
+    const width = mapRect?.width ?? 900;
+    const height = mapRect?.height ?? 720;
+
+    dragRef.current = null;
+    setZoom(FOCUS_ZOOM);
+    setPan({
+      x: ((50 - x) / 100) * width * FOCUS_ZOOM,
+      y: ((50 - y) / 100) * height * FOCUS_ZOOM,
+    });
+  }
+
+  function handleWheel(event: WheelEvent<HTMLDivElement>) {
+    if (isMapControlTarget(event.target)) return;
+    event.preventDefault();
+    zoomBy(event.deltaY > 0 ? -0.12 : 0.12);
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (isMapControlTarget(event.target)) return;
+
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      panX: pan.x,
+      panY: pan.y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    setPan({
+      x: drag.panX + event.clientX - drag.startX,
+      y: drag.panY + event.clientY - drag.startY,
+    });
+  }
+
+  function handlePointerUp(event: PointerEvent<HTMLDivElement>) {
+    if (dragRef.current?.pointerId === event.pointerId) {
+      dragRef.current = null;
+    }
+  }
+
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[#07090d]">
-      <RasterLayer
-        src="/overlays/civ-satellite-map.jpg"
-        opacity={opacity.satellite}
-        filter="saturate(0.95) contrast(1.04) brightness(0.92)"
-      />
-      <RasterLayer
-        src="/overlays/civ-geology-sems-map.jpg"
-        opacity={mapMode === "geology" ? opacity.geology : 0}
-        filter="saturate(1.02) contrast(1.06) brightness(0.82)"
-      />
-      <RasterLayer
-        src="/overlays/civ-admin-map.jpg"
-        opacity={mapMode === "admin" ? opacity.admin : 0}
-        filter="saturate(0.72) contrast(1.05) brightness(0.86)"
-      />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:64px_64px] opacity-25" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,9,13,0.02),rgba(7,9,13,0.16))]" />
-
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <rect
-          x="8"
-          y="4"
-          width="78"
-          height="90"
-          rx="1.5"
-          fill="rgba(17,24,39,0.04)"
-          stroke="#d9e7ff"
-          strokeWidth="0.28"
-          strokeDasharray="1.4 0.8"
-          vectorEffect="non-scaling-stroke"
+    <div
+      ref={mapRef}
+      className="relative h-full w-full overflow-hidden bg-[#07090d]"
+      onWheel={handleWheel}
+    >
+      <div
+        className="absolute inset-0 touch-none cursor-grab active:cursor-grabbing"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={{
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transformOrigin: "50% 50%",
+        }}
+      >
+        <RasterLayer
+          src="/overlays/civ-satellite-map.jpg"
+          opacity={opacity.satellite}
+          filter="saturate(0.95) contrast(1.04) brightness(0.92)"
         />
-        {concessions.map((concession) => (
-          <g
-            key={concession.id}
-            onClick={() => onSelect(concession.id)}
-            className="cursor-pointer"
-          >
-            {polygonRings(concession.polygon).map((ring, index) => {
-              const isSelected = concession.id === selected.id;
-              return (
-                <polygon
-                  key={`${concession.id}-${index}`}
-                  points={ring.map(([lng, lat]) => projectPoint(lng, lat).join(",")).join(" ")}
-                  fill={isSelected ? "rgba(255,31,31,0.13)" : "rgba(255,123,74,0.08)"}
-                  stroke={isSelected ? "#ff1f1f" : "#ff7b4a"}
-                  strokeWidth={isSelected ? 0.46 : 0.26}
-                  vectorEffect="non-scaling-stroke"
-                />
-              );
-            })}
-          </g>
-        ))}
-      </svg>
+        <RasterLayer
+          src="/overlays/civ-geology-sems-map.jpg"
+          opacity={mapMode === "geology" ? opacity.geology : 0}
+          filter="saturate(1.02) contrast(1.06) brightness(0.82)"
+        />
+        <RasterLayer
+          src="/overlays/civ-admin-map.jpg"
+          opacity={mapMode === "admin" ? opacity.admin : 0}
+          filter="saturate(0.72) contrast(1.05) brightness(0.86)"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:64px_64px] opacity-25" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,9,13,0.02),rgba(7,9,13,0.16))]" />
 
-      {cities.map((city) => {
-        const [left, top] = projectPoint(city.lng, city.lat);
-        return (
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <rect
+            x="8"
+            y="4"
+            width="78"
+            height="90"
+            rx="1.5"
+            fill="rgba(17,24,39,0.04)"
+            stroke="#d9e7ff"
+            strokeWidth="0.28"
+            strokeDasharray="1.4 0.8"
+            vectorEffect="non-scaling-stroke"
+          />
+          {concessions.map((concession) => (
+            <g
+              key={concession.id}
+              onClick={() => onSelect(concession.id)}
+              className="cursor-pointer"
+            >
+              {polygonRings(concession.polygon).map((ring, index) => {
+                const isSelected = concession.id === selected.id;
+                return (
+                  <polygon
+                    key={`${concession.id}-${index}`}
+                    points={ring.map(([lng, lat]) => projectPoint(lng, lat).join(",")).join(" ")}
+                    fill={isSelected ? "rgba(255,31,31,0.13)" : "rgba(255,123,74,0.08)"}
+                    stroke={isSelected ? "#ff1f1f" : "#ff7b4a"}
+                    strokeWidth={isSelected ? 0.46 : 0.26}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                );
+              })}
+            </g>
+          ))}
+        </svg>
+
+        {cities.map((city) => {
+          const [left, top] = projectPoint(city.lng, city.lat);
+          return (
           <MapPin
             key={city.name}
             left={left}
             top={top}
             color="#9fe3c4"
-            label={city.name}
+            label={zoom > 2.5 ? "" : city.name}
             title={`${city.name}: ${city.role}`}
+            zoom={zoom}
           />
-        );
-      })}
+          );
+        })}
 
-      {projects.map((project) => {
-        const [left, top] = projectPoint(project.lng, project.lat);
-        const kind = getProjectPinKind(project);
-        const focused = focusProjectId === project.id;
-        return (
-          <button
-            key={project.id}
-            type="button"
-            onClick={() =>
-              setMapCard({
-                kind: "project",
-                title: project.project,
-                subtitle: project.company,
-                meta: `${getProjectPinLabel(project)} / ${project.distanceKm}km from selected package`,
-                href: project.sourceUrls[0],
-              })
-            }
-            title={`${project.project} / ${project.company} / ${project.distanceKm}km`}
-            className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#07090d] shadow-lg transition ${
-              focused ? "h-5 w-5 ring-4 ring-[#f5c542]/45" : "h-3.5 w-3.5 hover:h-4 hover:w-4"
-            }`}
-            style={{
-              left: `${left}%`,
-              top: `${top}%`,
-              backgroundColor: pinColor(kind),
-            }}
-          />
-        );
-      })}
+        {projects.map((project) => {
+          const [left, top] = projectPoint(project.lng, project.lat);
+          const kind = getProjectPinKind(project);
+          const focused = focusProjectId === project.id;
+          return (
+            <button
+              key={project.id}
+              type="button"
+              onClick={() =>
+                setMapCard({
+                  kind: "project",
+                  title: project.project,
+                  subtitle: project.company,
+                  meta: `${getProjectPinLabel(project)} / ${project.distanceKm}km from selected package`,
+                  href: project.sourceUrls[0],
+                })
+              }
+              title={`${project.project} / ${project.company} / ${project.distanceKm}km`}
+              className={`absolute z-10 rounded-full border-2 border-[#07090d] shadow-lg transition ${
+                focused ? "h-5 w-5 ring-4 ring-[#f5c542]/45" : "h-3 w-3 hover:h-3.5 hover:w-3.5"
+              }`}
+              style={{
+                left: `${left}%`,
+                top: `${top}%`,
+                backgroundColor: pinColor(kind),
+                transform: `translate(-50%, -50%) scale(${1 / zoom})`,
+                transformOrigin: "50% 50%",
+              }}
+            />
+          );
+        })}
 
-      {evidencePins.map((pin) => {
-        const [left, top] = projectPoint(pin.lng, pin.lat);
-        return (
-          <MapPin
-            key={pin.id}
-            left={left}
-            top={top}
-            color="#4a90e2"
-            label=""
+        {evidencePins.map((pin) => {
+          const [left, top] = projectPoint(pin.lng, pin.lat);
+          return (
+            <MapPin
+              key={pin.id}
+              left={left}
+              top={top}
+              color="#4a90e2"
+              label=""
             title={`${pin.title} / ${pin.project}`}
+            zoom={zoom}
             onClick={() =>
-              setMapCard({
-                kind: "evidence",
-                title: pin.title,
-                subtitle: pin.project,
-                meta: pin.sourceType,
-                href: pin.sourceUrl,
-              })
-            }
-            small
-          />
-        );
-      })}
+                setMapCard({
+                  kind: "evidence",
+                  title: pin.title,
+                  subtitle: pin.project,
+                  meta: pin.sourceType,
+                  href: pin.sourceUrl,
+                })
+              }
+              small
+            />
+          );
+        })}
+      </div>
 
       {mapCard ? <MapInfoCard card={mapCard} onClose={() => setMapCard(null)} /> : null}
 
@@ -221,6 +321,38 @@ export default function MapView({
               {mode === "satellite" ? "Sat" : mode === "geology" ? "Geo" : "Admin"}
             </button>
           ))}
+        </div>
+        <div className="grid grid-cols-[28px_28px_1fr_42px] gap-1">
+          <button
+            type="button"
+            onClick={() => zoomBy(-ZOOM_STEP)}
+            className="h-7 rounded border border-[#2a3140] bg-[#07090d]/75 font-mono text-[12px] text-[#d7deea] transition hover:border-[#4a90e2]"
+            aria-label="Zoom out"
+          >
+            -
+          </button>
+          <button
+            type="button"
+            onClick={() => zoomBy(ZOOM_STEP)}
+            className="h-7 rounded border border-[#2a3140] bg-[#07090d]/75 font-mono text-[12px] text-[#d7deea] transition hover:border-[#4a90e2]"
+            aria-label="Zoom in"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            onClick={focusPackage}
+            className="h-7 rounded border border-[#f5c542]/45 bg-[#f5c542]/12 px-2 font-mono text-[9px] uppercase tracking-[0.03em] text-[#ffe39b] transition hover:border-[#f5c542]"
+          >
+            Focus
+          </button>
+          <button
+            type="button"
+            onClick={resetView}
+            className="h-7 rounded border border-[#2a3140] bg-[#07090d]/75 px-1 font-mono text-[9px] uppercase tracking-[0.03em] text-[#9aa6b8] transition hover:border-[#4a90e2] hover:text-[#d7deea]"
+          >
+            {Math.round(zoom * 100)}%
+          </button>
         </div>
         {controlsOpen ? (
           <>
@@ -291,6 +423,7 @@ function MapPin({
   color,
   label,
   title,
+  zoom,
   onClick,
   small = false,
 }: {
@@ -299,6 +432,7 @@ function MapPin({
   color: string;
   label: string;
   title: string;
+  zoom: number;
   onClick?: () => void;
   small?: boolean;
 }) {
@@ -307,12 +441,17 @@ function MapPin({
       type="button"
       onClick={onClick}
       title={title}
-      className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 text-left"
-      style={{ left: `${left}%`, top: `${top}%` }}
+      className="absolute z-10 flex items-center gap-1.5 text-left"
+      style={{
+        left: `${left}%`,
+        top: `${top}%`,
+        transform: `translate(-50%, -50%) scale(${1 / zoom})`,
+        transformOrigin: "50% 50%",
+      }}
     >
       <span
         className={`rounded-full border border-[#07090d] shadow-lg ${
-          small ? "h-2.5 w-2.5" : "h-3.5 w-3.5"
+          small ? "h-2.5 w-2.5" : "h-3 w-3"
         }`}
         style={{ backgroundColor: color }}
       />
@@ -433,6 +572,14 @@ function projectPoint(lng: number, lat: number): [number, number] {
 
 function clamp(value: number) {
   return Math.max(0, Math.min(100, value));
+}
+
+function clampZoom(value: number) {
+  return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
+}
+
+function isMapControlTarget(target: EventTarget) {
+  return target instanceof Element && Boolean(target.closest("button,a,input,label"));
 }
 
 function polygonRings(polygon: GeoJSON.Polygon | GeoJSON.MultiPolygon) {
