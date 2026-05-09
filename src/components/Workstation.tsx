@@ -36,7 +36,7 @@ const concessions = concessionsData as Concession[];
 const projects = projectsData as PublicCompanyProject[];
 const sourcePacks = sourcePacksData as SourcePack[];
 
-type ReconStep = "idle" | "extracting" | "committee" | "complete" | "error";
+type ReconStep = "idle" | "extracting" | "brief" | "complete" | "error";
 type TimelineStatus = "done" | "running" | "pending" | "error";
 type DataRoomRole = "all" | "geology" | "remote" | "commercial" | "institutional";
 type EvidenceFilter = "all" | EvidenceItem["evidenceType"];
@@ -73,38 +73,69 @@ const staticDemos: StaticDemo[] = [
     label: "Static Result 2",
     meta: "Coordinate intake result",
     concession: buildPointConcession(
-      "intake-static-yamoussoukro",
+      "static-yamoussoukro-point",
       "Static Yamoussoukro Point Result",
       [-5.05, 6.55],
     ),
   },
 ];
 
-export default function Workstation() {
-  const [runtimeConcessions, setRuntimeConcessions] = useState<Concession[]>([
-    staticDemos[1].concession,
-  ]);
-  const availableConcessions = useMemo(
-    () => [...concessions, ...runtimeConcessions],
-    [runtimeConcessions],
+type WorkstationProps = {
+  initialDemoId?: string;
+  initialIntakeText?: string;
+};
+
+export default function Workstation({
+  initialDemoId,
+  initialIntakeText,
+}: WorkstationProps) {
+  const preparedConcessions = useMemo(
+    () => [...concessions, staticDemos[1].concession],
+    [],
   );
-  const [selectedId, setSelectedId] = useState(concessions[0].id);
+  const initialRuntimeConcession = useMemo(
+    () => safeParseIntakeConcession(initialIntakeText),
+    [initialIntakeText],
+  );
+  const [runtimeConcessions, setRuntimeConcessions] = useState<Concession[]>(
+    initialRuntimeConcession ? [initialRuntimeConcession] : [],
+  );
+  const availableConcessions = useMemo(
+    () => [...preparedConcessions, ...runtimeConcessions],
+    [preparedConcessions, runtimeConcessions],
+  );
+  const initialSelectedId =
+    initialRuntimeConcession?.id ??
+    (preparedConcessions.some((item) => item.id === initialDemoId)
+      ? initialDemoId
+      : concessions[0].id);
+  const [selectedId, setSelectedId] = useState(initialSelectedId);
   const [reconStep, setReconStep] = useState<ReconStep>("idle");
   const [liveEvidence, setLiveEvidence] = useState<EvidenceItem[]>([]);
-  const [committeeMemo, setCommitteeMemo] = useState("");
+  const [reconBrief, setReconBrief] = useState("");
   const [reconError, setReconError] = useState("");
   const [dataRoomRole, setDataRoomRole] = useState<DataRoomRole>("all");
   const [evidenceFilter, setEvidenceFilter] = useState<EvidenceFilter>("all");
   const [focusedProjectId, setFocusedProjectId] = useState<string>();
-  const [intakeText, setIntakeText] = useState(intakeSeedText);
+  const [intakeText, setIntakeText] = useState(initialIntakeText || intakeSeedText);
   const [intakeError, setIntakeError] = useState("");
+  const [compareId, setCompareId] = useState(staticDemos[1].concession.id);
+  const [headerOpen, setHeaderOpen] = useState(true);
   const selected =
-    availableConcessions.find((item) => item.id === selectedId) ?? concessions[0];
-  const isRuntimePackage = selected.id.startsWith("intake-");
+    availableConcessions.find((item) => item.id === selectedId) ?? preparedConcessions[0];
+  const isRuntimePackage = selected.id.startsWith("runtime-");
+  const compareSelected =
+    availableConcessions.find((item) => item.id === compareId && item.id !== selected.id) ??
+    availableConcessions.find((item) => item.id !== selected.id) ??
+    staticDemos[1].concession;
 
   const nearbyProjects = useMemo(
     () => getNearbyProjects(selected, projects),
     [selected],
+  );
+  const compareNearbyProjects = useMemo(
+    () => getNearbyProjects(compareSelected, projects),
+    [compareSelected],
   );
 
   const selectedSourcesRaw = sourcePacks.filter(
@@ -112,6 +143,11 @@ export default function Workstation() {
   );
   const selectedSources =
     selectedSourcesRaw.length > 0 ? selectedSourcesRaw : sourcePacks;
+  const compareSourcesRaw = sourcePacks.filter(
+    (source) => source.concessionId === compareSelected.id,
+  );
+  const compareSources =
+    compareSourcesRaw.length > 0 ? compareSourcesRaw : sourcePacks;
 
   const closestMapAnchor = nearbyProjects[0];
   const selectedCommoditySet = new Set(
@@ -120,8 +156,9 @@ export default function Workstation() {
   const commodityTape = selectedCommoditySet.has("Au")
     ? "Au + public data package"
     : `${Array.from(selectedCommoditySet).slice(0, 2).join(" / ") || "Multi"} package`;
-  const isReconRunning = reconStep === "extracting" || reconStep === "committee";
+  const isReconRunning = reconStep === "extracting" || reconStep === "brief";
   const evidenceItems = liveEvidence.length > 0 ? liveEvidence : selectedSources.map(sourcePackToEvidence);
+  const compareEvidenceItems = compareSources.map(sourcePackToEvidence);
   const sourceCards = useMemo(
     () => selectedSources.map((source) => buildSourceCard(source)),
     [selectedSources],
@@ -149,21 +186,26 @@ export default function Workstation() {
     [sourceCards],
   );
   const sourceMix = buildSourceMix(sourceCards);
-  const sourceCompanyCount = new Set(selectedSources.map((source) => source.company)).size;
-  const defaultRoute =
-    evidenceItems.length >= 4 && sourceCompanyCount >= 2
-      ? "PRIORITIZE"
-      : evidenceItems.length >= 2
-        ? "WATCH"
-        : "DEFER";
-  const liveRoute = getMemoRoute(committeeMemo) ?? defaultRoute;
-  const confidence = liveEvidence.length > 0 ? "Live" : liveRoute === "PRIORITIZE" ? "High" : "Medium";
-  const decisionTone =
-    liveRoute === "PRIORITIZE"
+  const compareSourceCards = useMemo(
+    () => compareSources.map((source) => buildSourceCard(source)),
+    [compareSources],
+  );
+  const compareSourceMix = buildSourceMix(compareSourceCards);
+  const compareDelta = buildCompareDelta({
+    left: selected,
+    right: compareSelected,
+    leftProjects: nearbyProjects,
+    rightProjects: compareNearbyProjects,
+    leftEvidence: evidenceItems,
+    rightEvidence: compareEvidenceItems,
+    leftMix: sourceMix,
+    rightMix: compareSourceMix,
+  });
+  const packageStatus = liveEvidence.length > 0 ? "Live package" : "Evidence package";
+  const packageStatusTone =
+    liveEvidence.length > 0
       ? "border-[#22c55e]/60 bg-[#22c55e]/15 text-[#b7f7ca]"
-      : liveRoute === "DEFER"
-        ? "border-[#ef4444]/60 bg-[#ef4444]/15 text-[#fecaca]"
-      : "border-[#f59e0b]/60 bg-[#f59e0b]/15 text-[#ffd48a]";
+      : "border-[#4a90e2]/50 bg-[#4a90e2]/12 text-[#b9dcff]";
   const layerStack = buildLayerStack(
     nearbyProjects.length,
     selectedSources.length,
@@ -179,7 +221,7 @@ export default function Workstation() {
     setSelectedId(id);
     setReconStep("idle");
     setLiveEvidence([]);
-    setCommitteeMemo("");
+    setReconBrief("");
     setReconError("");
     setDataRoomRole("all");
     setEvidenceFilter("all");
@@ -187,9 +229,6 @@ export default function Workstation() {
   }
 
   function activateStaticDemo(concession: Concession) {
-    if (concession.id.startsWith("intake-")) {
-      setRuntimeConcessions((current) => upsertConcession(current, concession));
-    }
     selectConcession(concession.id);
   }
 
@@ -243,7 +282,7 @@ export default function Workstation() {
   async function runRecon() {
     setReconStep("extracting");
     setReconError("");
-    setCommitteeMemo("");
+    setReconBrief("");
 
     try {
       const evidenceResponse = await fetch("/api/extract-evidence", {
@@ -271,9 +310,9 @@ export default function Workstation() {
           : selectedSources.map(sourcePackToEvidence);
 
       setLiveEvidence(extractedEvidence);
-      setReconStep("committee");
+      setReconStep("brief");
 
-      const committeeResponse = await fetch("/api/investment-committee", {
+      const briefResponse = await fetch("/api/investment-committee", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -284,11 +323,11 @@ export default function Workstation() {
         }),
       });
 
-      if (!committeeResponse.ok) {
-        throw new Error(await responseError(committeeResponse, "Expert review route failed"));
+      if (!briefResponse.ok) {
+        throw new Error(await responseError(briefResponse, "Recon brief failed"));
       }
 
-      await streamCommitteeMemo(committeeResponse, setCommitteeMemo);
+      await streamReconBrief(briefResponse, setReconBrief);
       setReconStep("complete");
     } catch (error) {
       setReconStep("error");
@@ -297,8 +336,8 @@ export default function Workstation() {
   }
 
   return (
-    <main className="flex h-screen min-w-[1024px] overflow-hidden bg-[#07090d] text-[#f4f7fb]">
-      <section className="relative h-full min-w-0 basis-[68%] border-r border-[#2a3140]">
+    <main className="flex h-screen min-w-[900px] overflow-hidden bg-[#07090d] text-[#f4f7fb]">
+      <section className="relative h-full min-w-0 flex-1 border-r border-[#2a3140]">
         <MapView
           concessions={availableConcessions}
           selected={selected}
@@ -309,29 +348,40 @@ export default function Workstation() {
         />
         <div className="absolute left-4 right-4 top-4 z-10 max-w-[760px]">
           <div className="workstation-panel border border-[#2a3140] bg-[#10141c]/95 shadow-2xl backdrop-blur-md">
-            <div className="flex items-start justify-between gap-5 border-b border-[#2a3140] px-4 py-3">
+            <div className={`flex items-start justify-between gap-5 px-4 py-3 ${headerOpen ? "border-b border-[#2a3140]" : ""}`}>
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#8c96a8]">
-                  Public + Remote Evidence Analyst
+                  Public-Data Intelligence Workbench
                 </p>
                 <h1 className="mt-1 text-[20px] font-bold leading-6 text-[#f4f7fb]">
-                  West Africa License Recon
+                  Concession Recon
                 </h1>
               </div>
-              <div className={`shrink-0 rounded-md border px-3 py-2 text-center ${decisionTone}`}>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.04em]">
-                  Package Triage
-                </p>
-                <p className="text-sm font-bold">{liveRoute}</p>
+              <div className="flex shrink-0 items-start gap-2">
+                <div className={`rounded-md border px-3 py-2 text-center ${packageStatusTone}`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.04em]">
+                    Public Data
+                  </p>
+                  <p className="text-sm font-bold">{evidenceItems.length} sources</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHeaderOpen((open) => !open)}
+                  className="rounded-md border border-[#2a3140] bg-[#07090d]/70 px-2 py-2 font-mono text-[10px] text-[#d7deea] transition hover:border-[#4a90e2]"
+                >
+                  {headerOpen ? "Collapse" : "Expand"}
+                </button>
               </div>
             </div>
+            {headerOpen ? (
+              <>
             <div className="grid grid-cols-[1.2fr_0.8fr] gap-3 px-4 py-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-[#f5c542]">
                   {selected.name}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-[#b7c0d0]">
-                  {selected.country} license package with 150km public + remote evidence scan.
+                  {selected.country} license package with a 150km public and remote-data scan.
                   {closestMapAnchor
                     ? ` Closest map anchor: ${closestMapAnchor.project}.`
                     : " No public comparator loaded."}
@@ -345,8 +395,10 @@ export default function Workstation() {
             </div>
             <div className="grid grid-cols-2 gap-2 border-t border-[#2a3140] px-4 py-3">
               {staticDemos.map((demo) => (
-                <button
+                <a
                   key={demo.id}
+                  href={`/?demo=${encodeURIComponent(demo.concession.id)}`}
+                  onPointerDown={() => activateStaticDemo(demo.concession)}
                   onClick={() => activateStaticDemo(demo.concession)}
                   className={`min-w-0 rounded-md border px-3 py-2 text-left transition ${
                     selected.id === demo.concession.id
@@ -360,9 +412,17 @@ export default function Workstation() {
                   <span className="mt-1 block truncate text-xs text-[#d5dbea]">
                     {demo.meta}
                   </span>
-                </button>
+                </a>
               ))}
             </div>
+              </>
+            ) : (
+              <div className="border-t border-[#2a3140] px-4 py-2">
+                <p className="truncate text-xs text-[#b7c0d0]">
+                  {selected.name} / {nearbyProjects.length} anchors / {selectedSources.length} sources
+                </p>
+              </div>
+            )}
           </div>
         </div>
         <div className="absolute bottom-4 left-4 z-10 flex max-w-[520px] flex-wrap gap-2">
@@ -373,7 +433,7 @@ export default function Workstation() {
         </div>
       </section>
 
-      <aside className="flex h-full min-w-[390px] basis-[32%] flex-col overflow-y-auto bg-[#10141c]">
+      <aside className="flex h-full w-[390px] shrink-0 flex-col overflow-y-auto bg-[#10141c]">
         <div className="border-b border-[#2a3140] px-4 py-4">
           <div className="grid gap-2">
             <div className="min-w-0">
@@ -419,40 +479,45 @@ export default function Workstation() {
               Paste a coordinate, GeoJSON Point, Polygon, or MultiPolygon. A point becomes a
               small license-style package and reuses the public-source recon workflow.
             </p>
-            <textarea
-              value={intakeText}
-              onChange={(event) => setIntakeText(event.target.value)}
-              spellCheck={false}
-              className="mt-3 h-28 w-full resize-none rounded-md border border-[#2a3140] bg-[#07090d] px-3 py-2 font-mono text-xs leading-5 text-[#d5dbea] outline-none transition focus:border-[#22c55e]"
-            />
-            {intakeError ? (
-              <div className="mt-2 rounded-md border border-[#ef4444]/40 bg-[#ef4444]/10 px-3 py-2 text-xs text-[#fecaca]">
-                {intakeError}
+            <form action="/" method="get">
+              <textarea
+                name="intake"
+                value={intakeText}
+                onChange={(event) => setIntakeText(event.target.value)}
+                spellCheck={false}
+                className="mt-3 h-28 w-full resize-none rounded-md border border-[#2a3140] bg-[#07090d] px-3 py-2 font-mono text-xs leading-5 text-[#d5dbea] outline-none transition focus:border-[#22c55e]"
+              />
+              {intakeError ? (
+                <div className="mt-2 rounded-md border border-[#ef4444]/40 bg-[#ef4444]/10 px-3 py-2 text-xs text-[#fecaca]">
+                  {intakeError}
+                </div>
+              ) : null}
+              <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-[#2a3140] bg-[#10141c] px-3 py-2 text-xs text-[#b7c0d0] transition hover:border-[#4a90e2]">
+                  <Upload size={13} />
+                  Upload JSON
+                  <input
+                    type="file"
+                    accept=".json,application/json,geo+json,.geojson"
+                    className="hidden"
+                    onChange={(event) => void loadIntakeFile(event.target.files?.[0])}
+                  />
+                </label>
+                <button
+                  type="submit"
+                  onPointerDown={runIntake}
+                  onClick={runIntake}
+                  className="flex items-center justify-center gap-2 rounded-md bg-[#22c55e] px-3 py-2 text-xs font-semibold text-[#07120a] transition hover:bg-[#86efac]"
+                >
+                  <Play size={13} />
+                  Create package
+                </button>
               </div>
-            ) : null}
-            <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-[#2a3140] bg-[#10141c] px-3 py-2 text-xs text-[#b7c0d0] transition hover:border-[#4a90e2]">
-                <Upload size={13} />
-                Upload JSON
-                <input
-                  type="file"
-                  accept=".json,application/json,geo+json,.geojson"
-                  className="hidden"
-                  onChange={(event) => void loadIntakeFile(event.target.files?.[0])}
-                />
-              </label>
-              <button
-                onClick={runIntake}
-                className="flex items-center justify-center gap-2 rounded-md bg-[#22c55e] px-3 py-2 text-xs font-semibold text-[#07120a] transition hover:bg-[#86efac]"
-              >
-                <Play size={13} />
-                Create package
-              </button>
-            </div>
+            </form>
             {isRuntimePackage ? (
               <div className="mt-3 rounded-md border border-[#22c55e]/30 bg-[#22c55e]/10 px-3 py-2 text-xs leading-5 text-[#a7f3d0]">
-                Runtime package active. Press Run License Recon to classify the evidence
-                pack and draft the expert route.
+                Runtime package active. Build the evidence package to organize public
+                sources for geologist, remote-sensing, and commercial review.
               </div>
             ) : null}
           </section>
@@ -466,13 +531,78 @@ export default function Workstation() {
             ) : (
               <FileSearch size={16} />
             )}
-            {isReconRunning ? "Running License Recon" : "Run License Recon"}
+            {isReconRunning ? "Building Evidence Package" : "Build Evidence Package"}
           </button>
           {reconError ? (
             <div className="rounded-md border border-[#ef4444]/40 bg-[#ef4444]/10 px-3 py-2 text-xs leading-5 text-[#fecaca]">
               {reconError}
             </div>
           ) : null}
+
+          <section className="workstation-panel border border-[#2a3140] bg-[#171c26]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <FileSearch size={16} className="shrink-0 text-[#22c55e]" />
+                <h2 className="truncate text-sm font-semibold">Compare Panel</h2>
+              </div>
+              <span className="shrink-0 font-mono text-xs text-[#8c96a8]">
+                side-by-side
+              </span>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-[#8c96a8]">
+              Compare two packages by source density, map anchors, and evidence mix before
+              opening the underlying citations.
+            </p>
+            <div className="mt-3 grid gap-2">
+              <label className="grid gap-1.5">
+                <span className="font-mono text-[11px] uppercase tracking-[0.04em] text-[#8c96a8]">
+                  Compare against
+                </span>
+                <select
+                  value={compareSelected.id}
+                  onChange={(event) => setCompareId(event.target.value)}
+                  className="rounded-md border border-[#2a3140] bg-[#07090d] px-3 py-2 text-xs text-[#d5dbea] outline-none transition focus:border-[#22c55e]"
+                >
+                  {availableConcessions
+                    .filter((item) => item.id !== selected.id)
+                    .map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <CompareStat label="Current" name={selected.name} value={`${evidenceItems.length} sources`} />
+                <CompareStat label="Compare" name={compareSelected.name} value={`${compareEvidenceItems.length} sources`} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {compareDelta.metrics.map((metric) => (
+                  <div
+                    key={metric.label}
+                    className="rounded-md border border-[#2a3140] bg-[#10141c] px-3 py-2"
+                  >
+                    <p className="font-mono text-[10px] uppercase tracking-[0.04em] text-[#8c96a8]">
+                      {metric.label}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[#d5dbea]">
+                      {metric.left} vs {metric.right}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-md border border-[#22c55e]/30 bg-[#22c55e]/10 px-3 py-2">
+                <p className="font-mono text-[10px] uppercase tracking-[0.04em] text-[#a7f3d0]">
+                  Recon delta
+                </p>
+                <ul className="mt-1 space-y-1 text-xs leading-5 text-[#d5dbea]">
+                  {compareDelta.notes.map((note) => (
+                    <li key={note}>- {note}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
 
           <section className="workstation-panel border border-[#2a3140] bg-[#171c26]">
             <div className="flex items-center justify-between gap-3">
@@ -488,7 +618,7 @@ export default function Workstation() {
               <PinGuide
                 color="#ff1f1f"
                 label="Red license package"
-                text="Three small concessions being triaged by this panel."
+                text="Selected land package currently being assembled into an evidence file."
               />
               <PinGuide
                 color="#d98b4a"
@@ -521,8 +651,8 @@ export default function Workstation() {
               <ExternalLink size={13} className="shrink-0" />
             </a>
             <div className="mt-3 rounded-md border border-[#f5c542]/30 bg-[#f5c542]/10 px-3 py-2 text-xs leading-5 text-[#ffe39b]">
-              Same shear zone or mineralized trend fit carries more weight than raw distance;
-              kilometers only rank where to inspect first.
+              Same-shear, same-belt, or same-trend references are grouped ahead of
+              simple distance reads.
             </div>
           </section>
 
@@ -696,8 +826,8 @@ export default function Workstation() {
               <h2 className="text-sm font-semibold">Nearby Map Anchors</h2>
             </div>
             <p className="mt-2 text-xs leading-5 text-[#8c96a8]">
-              Orange pins are company anchors; cyan pins are ASM / remote-sensing disturbance anchors; green pins are institutional sources. Treat distance as a prompt;
-              prioritize projects on the same shear zone, belt, or mineralized trend.
+              Orange pins are company anchors; cyan pins are ASM / remote-sensing disturbance anchors; green pins are institutional sources. Treat distance as context;
+              inspect same-shear, same-belt, or same-trend references first.
             </p>
             <div className="mt-3 space-y-2">
               {nearbyProjects.map((project) => (
@@ -740,15 +870,15 @@ export default function Workstation() {
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
                 <Activity size={16} className="shrink-0 text-[#4a90e2]" />
-                <h2 className="truncate text-sm font-semibold">Public + Remote Evidence</h2>
+                <h2 className="truncate text-sm font-semibold">Evidence Package</h2>
               </div>
               <span className="shrink-0 font-mono text-xs text-[#8c96a8]">
                 {visibleEvidenceItems.length}/{evidenceItems.length} citations
               </span>
             </div>
             <p className="mt-2 text-xs leading-5 text-[#8c96a8]">
-              Blue pins are source-backed citations. The analyst read is trend fit first,
-              distance second.
+              Source-backed citations grouped by geology, remote sensing, license, and
+              commercial context for follow-up research.
             </p>
             <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
               {evidenceTypeOptions.map((option) => (
@@ -819,39 +949,39 @@ export default function Workstation() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <ShieldCheck size={16} className="shrink-0 text-[#f5c542]" />
-                  <h2 className="truncate text-sm font-semibold">Expert Review Route</h2>
+                  <h2 className="truncate text-sm font-semibold">Recon Brief</h2>
                 </div>
                 <p className="mt-1 text-xs text-[#8c96a8]">
-                  AI prepares the evidence route; specialists make the technical and commercial judgment.
+                  A citation-led brief for researchers and technical reviewers.
                 </p>
               </div>
-              <div className={`shrink-0 rounded-md border px-3 py-2 text-center ${decisionTone}`}>
+              <div className={`shrink-0 rounded-md border px-3 py-2 text-center ${packageStatusTone}`}>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.04em]">
-                  Package Triage
+                  Package Status
                 </p>
-                <p className="text-base font-bold">{liveRoute}</p>
+                <p className="text-base font-bold">{packageStatus}</p>
               </div>
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <DecisionMetric label="Confidence" value={confidence} />
-              <DecisionMetric label="Sources" value={evidenceItems.length.toString()} />
-              <DecisionMetric label="Anchors" value={nearbyProjects.length.toString()} />
+              <BriefMetric label="Output" value="Evidence" />
+              <BriefMetric label="Sources" value={evidenceItems.length.toString()} />
+              <BriefMetric label="Anchors" value={nearbyProjects.length.toString()} />
             </div>
-            {committeeMemo ? (
+            {reconBrief ? (
               <div className="mt-4 rounded-md border border-[#2a3140] bg-[#10141c] px-3 py-3">
                 <div className="whitespace-pre-wrap text-xs leading-5 text-[#d5dbea]">
-                  {committeeMemo}
+                  {reconBrief}
                 </div>
               </div>
             ) : (
               <div className="mt-4 space-y-2 text-sm leading-6 text-[#d5dbea]">
                 <MemoRow
-                  label="Expert Collaboration Model"
-                  text="The app packages public data for geologist, remote-sensing, and commercial teams; it does not replace expert judgment."
+                  label="Research Collaboration Model"
+                  text="The app packages public data for geology, remote-sensing, and commercial reviewers; it does not replace source review."
                 />
                 <MemoRow
                   label="Geology / Geochemistry / Geophysics"
-                  text="Use regional geology, soil or stream geochemistry, geophysics, and public drilling/resource analogues to decide which targets deserve field verification."
+                  text="Use regional geology, soil or stream geochemistry, geophysics, and public drilling/resource analogues to frame field-verification questions."
                 />
                 <MemoRow
                   label="Remote Sensing / ASM Read"
@@ -859,11 +989,11 @@ export default function Workstation() {
                 />
                 <MemoRow
                   label="Missing Data"
-                  text="Confirm tenure status, local geology, structure, target access, and whether disclosed mineralized trends plausibly continue into the package."
+                  text="Confirm tenure status, local geology, structure, access, and whether disclosed mineralized trends are relevant to the package."
                 />
                 <MemoRow
-                  label="30-Day Expert Workplan"
-                  text="Geologist checks structure and sampling logic; remote-sensing team screens disturbance and access; commercial team builds counterparties and source library."
+                  label="Evidence Build Plan"
+                  text="Geology checks structure and sampling logic; remote sensing screens disturbance and access; commercial review builds counterparties and source library."
                 />
               </div>
             )}
@@ -871,8 +1001,8 @@ export default function Workstation() {
               <div className="flex gap-2">
                 <AlertTriangle size={15} className="mt-0.5 shrink-0 text-[#f5c542]" />
                 <p className="text-xs leading-5 text-[#ffd48a]">
-                  AI triage is not a final decision. Prioritize only after expert
-                  review ties title, geology, remote evidence, and field checks to the selected package.
+                  This tool does not verify mineralization or economics. It packages
+                  public evidence so reviewers can plan source checks and field follow-up.
                 </p>
               </div>
             </div>
@@ -909,7 +1039,7 @@ function parseIntakeConcession(raw: string): Concession {
   const parsed = JSON.parse(raw) as unknown;
   const geometry = extractGeometry(parsed);
   const name = extractName(parsed) ?? "Live intake package";
-  const id = `intake-${slugify(name)}`;
+  const id = `runtime-${slugify(name)}`;
 
   if (geometry.type === "Point") {
     return buildPointConcession(id, name, geometry.coordinates as [number, number]);
@@ -926,6 +1056,15 @@ function parseIntakeConcession(raw: string): Concession {
   }
 
   throw new Error("Use a Point, Polygon, MultiPolygon, or { lat, lng } JSON object.");
+}
+
+function safeParseIntakeConcession(raw?: string) {
+  if (!raw) return undefined;
+  try {
+    return parseIntakeConcession(raw);
+  } catch {
+    return undefined;
+  }
 }
 
 function extractGeometry(input: unknown): GeoJSON.Geometry {
@@ -1047,7 +1186,7 @@ function MapLegend({ color, label }: { color: string; label: string }) {
   );
 }
 
-function DecisionMetric({ label, value }: { label: string; value: string }) {
+function BriefMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-md border border-[#2a3140] bg-[#10141c] px-2 py-2">
       <p className="truncate text-[10px] font-semibold uppercase tracking-[0.04em] text-[#8c96a8]">
@@ -1056,6 +1195,26 @@ function DecisionMetric({ label, value }: { label: string; value: string }) {
       <p className="mt-1 truncate font-mono text-xs font-semibold text-[#f4f7fb]">
         {value}
       </p>
+    </div>
+  );
+}
+
+function CompareStat({
+  label,
+  name,
+  value,
+}: {
+  label: string;
+  name: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-md border border-[#2a3140] bg-[#10141c] px-3 py-2">
+      <p className="font-mono text-[10px] uppercase tracking-[0.04em] text-[#8c96a8]">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-xs font-semibold text-[#f4f7fb]">{name}</p>
+      <p className="mt-1 font-mono text-[11px] text-[#9cc6ff]">{value}</p>
     </div>
   );
 }
@@ -1255,6 +1414,82 @@ function buildSourceMix(sourceCards: SourceCard[]) {
   };
 }
 
+function buildCompareDelta({
+  left,
+  right,
+  leftProjects,
+  rightProjects,
+  leftEvidence,
+  rightEvidence,
+  leftMix,
+  rightMix,
+}: {
+  left: Concession;
+  right: Concession;
+  leftProjects: PublicCompanyProject[];
+  rightProjects: PublicCompanyProject[];
+  leftEvidence: EvidenceItem[];
+  rightEvidence: EvidenceItem[];
+  leftMix: ReturnType<typeof buildSourceMix>;
+  rightMix: ReturnType<typeof buildSourceMix>;
+}) {
+  const leftTechnical = countEvidenceTypes(leftEvidence, [
+    "drilling_result",
+    "resource_estimate",
+    "geochemistry",
+    "geophysics",
+    "research_paper",
+  ]);
+  const rightTechnical = countEvidenceTypes(rightEvidence, [
+    "drilling_result",
+    "resource_estimate",
+    "geochemistry",
+    "geophysics",
+    "research_paper",
+  ]);
+  const leftRemote = countEvidenceTypes(leftEvidence, ["remote_sensing", "asm_activity", "trenching"]);
+  const rightRemote = countEvidenceTypes(rightEvidence, ["remote_sensing", "asm_activity", "trenching"]);
+  const leftLicense = countEvidenceTypes(leftEvidence, ["license_activity", "cadastre"]);
+  const rightLicense = countEvidenceTypes(rightEvidence, ["license_activity", "cadastre"]);
+
+  const notes = [
+    `${left.name} has ${leftEvidence.length - rightEvidence.length >= 0 ? "at least as much" : "less"} cached public-source density than ${right.name}.`,
+    `${leftTechnical} vs ${rightTechnical} technical/geology items: geologist should inspect same-trend relevance before drawing conclusions.`,
+    `${leftRemote} vs ${rightRemote} remote/ASM items: remote-sensing team gets a quick queue of disturbance and workings references.`,
+    `${leftLicense} vs ${rightLicense} license/cadastre items: commercial team should still verify status in Landfolio or official records.`,
+  ];
+
+  return {
+    metrics: [
+      {
+        label: "Map anchors",
+        left: leftProjects.length.toString(),
+        right: rightProjects.length.toString(),
+      },
+      {
+        label: "Public co.",
+        left: leftMix.publicCompany.toString(),
+        right: rightMix.publicCompany.toString(),
+      },
+      {
+        label: "Papers",
+        left: leftMix.publicPaper.toString(),
+        right: rightMix.publicPaper.toString(),
+      },
+      {
+        label: "Gov / inst.",
+        left: leftMix.institutional.toString(),
+        right: rightMix.institutional.toString(),
+      },
+    ],
+    notes,
+  };
+}
+
+function countEvidenceTypes(items: EvidenceItem[], types: EvidenceItem["evidenceType"][]) {
+  return items.filter((item) => types.includes(item.evidenceType)).length;
+}
+
 function formatEvidenceType(type: EvidenceItem["evidenceType"]) {
   return type
     .split("_")
@@ -1289,7 +1524,7 @@ async function responseError(response: Response, fallback: string) {
   return text.trim() || fallback;
 }
 
-async function streamCommitteeMemo(
+async function streamReconBrief(
   response: Response,
   setMemo: (memo: string) => void,
 ) {
@@ -1317,11 +1552,6 @@ async function streamCommitteeMemo(
   setMemo(memo);
 }
 
-function getMemoRoute(memo: string) {
-  const match = memo.match(/\b(PRIORITIZE|WATCH|DEFER)\b/i);
-  return match?.[1].toUpperCase();
-}
-
 function getTimelineItems(
   step: ReconStep,
   projectCount: number,
@@ -1336,8 +1566,8 @@ function getTimelineItems(
         : step === "error"
           ? "error"
           : "done";
-  const committeeStatus: TimelineStatus =
-    step === "committee"
+  const briefStatus: TimelineStatus =
+    step === "brief"
       ? "running"
       : step === "complete"
         ? "done"
@@ -1357,14 +1587,14 @@ function getTimelineItems(
       status: "done" as TimelineStatus,
     },
     {
-      label: "Classifying package evidence",
+      label: "Structuring package evidence",
       meta: step === "idle" ? `${sourceCount} sources` : `${evidenceCount} evidence items`,
       status: extractionStatus,
     },
     {
-      label: "Drafting expert review route",
+      label: "Drafting recon brief",
       meta: "GPT-5.5",
-      status: committeeStatus,
+      status: briefStatus,
     },
   ];
 }

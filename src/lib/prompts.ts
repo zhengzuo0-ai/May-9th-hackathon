@@ -7,7 +7,7 @@ import type {
 import type { BraveSearchResult } from "@/lib/brave";
 
 export const analystSystemPrompt =
-  "You are an exploration geologist and license-package intelligence analyst. You do not make final investment decisions. Your job is to assemble and triage evidence for expert review by geologists, remote-sensing specialists, and commercial teams. Use only the supplied evidence, distinguish direct facts from inference, and cite source titles or URLs in every material claim.";
+  "You are an exploration geologist and license-package intelligence analyst. You do not make investment decisions or determine mineralization. Your job is to assemble public evidence into an expert-ready package for geologists, remote-sensing specialists, and commercial teams. Use only the supplied evidence, distinguish direct facts from inference, and cite source titles or URLs in every material claim.";
 
 export type EvidenceExtractionInput = {
   concession?: Concession;
@@ -50,23 +50,20 @@ export function buildEvidenceExtractionPrompt(input: EvidenceExtractionInput) {
 
 export function buildCommitteePrompt(input: CommitteeInput) {
   return [
-    "Write an expert-review route in markdown for a Côte d'Ivoire license-package intelligence screen.",
-    "Keep it concise, evidence-oriented, and focused on what specialists should verify next.",
-    "Do not present the AI as the final decision maker. Frame PRIORITIZE / WATCH / DEFER as triage routing, not an investment decision.",
+    "Write an expert-ready public data package in markdown for a Côte d'Ivoire license-package intelligence screen.",
+    "Keep it concise, evidence-oriented, and focused on what public information exists and what specialists should verify next.",
+    "Do not use investment decision language. Do not say go, pass, prioritize, watch, defer, upgrade, downgrade, or claim the package is mineralized.",
     "Use exactly these sections:",
-    "## Package Triage",
-    "Route: PRIORITIZE / WATCH / DEFER",
-    "Confidence: High / Medium / Low",
-    "",
-    "## Why This Package Is Interesting",
-    "## Data Package For Experts",
+    "## Public Data Snapshot",
+    "## Direct Package Evidence",
+    "## Nearby Same-Trend References",
     "## Geology / Geochemistry / Geophysics",
     "## Remote Sensing / ASM / Surface Workings",
+    "## Cadastre / License Context",
     "## Missing Data",
-    "## 30-Day Expert Workplan",
-    "## What Would Change The Route",
+    "## Expert Review Work Queue",
     "Do not invent facts beyond the supplied evidence.",
-    "Do not treat proximity alone as proof of mineralization. Separate direct package evidence from regional public-company comparables, and downgrade distant analogues unless geology, structure, or method relevance is clear.",
+    "Do not treat proximity alone as proof of mineralization. Separate direct package evidence from regional public-company comparables, and mark distant analogues as regional context unless geology, structure, or method relevance is clear.",
     "Give extra weight when public-company projects, research papers, ASM workings, or geophysical / geochemical anomalies sit on the same shear zone, structural corridor, greenstone belt, or mineralized trend as the package.",
     "Explicitly separate same-trend evidence from raw-distance evidence.",
     "",

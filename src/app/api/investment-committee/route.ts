@@ -51,7 +51,6 @@ function markdownResponse(markdown: string) {
 }
 
 function fallbackExpertRouteMarkdown(evidence: EvidenceItem[]) {
-  const highConfidence = evidence.filter((item) => item.confidence === "high");
   const sourceCompanyCount = new Set(
     evidence.map((item) => item.company).filter(Boolean),
   ).size;
@@ -69,21 +68,12 @@ function fallbackExpertRouteMarkdown(evidence: EvidenceItem[]) {
       item.evidenceType === "asm_activity" ||
       item.evidenceType === "trenching",
   );
-  const decision =
-    evidence.length >= 4 && sourceCompanyCount >= 2
-      ? "PRIORITIZE"
-      : evidence.length >= 2
-        ? "WATCH"
-        : "DEFER";
-  const confidence =
-    highConfidence.length >= 2 ? "High" : evidence.length >= 2 ? "Medium" : "Low";
+  const cadastreItems = evidence.filter(
+    (item) => item.evidenceType === "cadastre" || item.evidenceType === "license_activity",
+  );
 
   return [
-    "## Package Triage",
-    `Route: ${decision}`,
-    `Confidence: ${confidence}`,
-    "",
-    "## Why This Package Is Interesting",
+    "## Public Data Snapshot",
     bullet(
       evidence.length > 0
         ? `The evidence stack contains ${evidence.length} source-backed item(s) from ${sourceCompanyCount} source company or organization(s).`
@@ -95,13 +85,16 @@ function fallbackExpertRouteMarkdown(evidence: EvidenceItem[]) {
         : "Resource comparability is not yet established from the supplied evidence.",
     ),
     "",
-    "## Data Package For Experts",
+    "## Direct Package Evidence",
     bullet(
-      "This is an evidence package for geologist, remote-sensing, and commercial review; it is not a final AI determination.",
+      "This package organizes public data for geologist, remote-sensing, and commercial review; it is not a mineralization or investment determination.",
     ),
     bullet(
       `The package currently contains ${evidence.length} item(s), including company disclosures, research references, and remote/ASM context where available.`,
     ),
+    "",
+    "## Nearby Same-Trend References",
+    bullet("Treat nearby public projects as comparables only when structure, belt, method, or trend continuity is plausible from public sources."),
     "",
     "## Geology / Geochemistry / Geophysics",
     bullet(
@@ -130,19 +123,22 @@ function fallbackExpertRouteMarkdown(evidence: EvidenceItem[]) {
         : "No ASM, workings, or trenching evidence has been extracted from the supplied sources.",
     ),
     "",
+    "## Cadastre / License Context",
+    bullet(
+      cadastreItems.length > 0
+        ? `${cadastreItems.length} cadastre or license-context item(s) should be checked against Landfolio and official records.`
+        : "Cadastre status, overlaps, and license standing still need confirmation from official sources.",
+    ),
+    "",
     "## Missing Data",
-    bullet("The fallback thesis cannot prove mineralization inside the license package from proximity alone."),
+    bullet("This public data package cannot prove mineralization inside the license package from proximity alone."),
     bullet("Direct geology, geochemistry, geophysics, license standing, structural trend continuity, and field validation remain gating diligence items."),
     "",
-    "## 30-Day Expert Workplan",
+    "## Expert Review Work Queue",
     bullet("Geologist: verify package license status, local geology, shear-zone continuity, alteration, and same-trend target analogues against official maps and public technical reports."),
     bullet("Remote sensing: screen recent disturbance, pits, river impacts, access, and vegetation change before field mobilization."),
     bullet("Commercial: map counterparties, operator disclosures, cadence of news releases, and IR follow-up questions; separate same-trend comparables from distant regional analogues."),
-    bullet("Field team: only after desktop triage, verify workings, access, and priority sample lines on the ground."),
-    "",
-    "## What Would Change The Route",
-    bullet("Upgrade if direct package drilling, geochemistry, geophysics, or visible workings corroborate the target."),
-    bullet("Downgrade if cadastre checks, access constraints, or field inspection contradict the desktop evidence."),
+    bullet("Field team: after desktop review, verify workings, access, and candidate sample lines on the ground."),
   ]
     .filter(Boolean)
     .join("\n");

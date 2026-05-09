@@ -16,6 +16,23 @@
     ]
   },
   {
+    "id": "kobo-kossou",
+    "concessionId": "ci-yaoure-kokumbo-aoi",
+    "company": "Kobo Resources",
+    "ticker": "KRI",
+    "exchange": "TSXV",
+    "project": "Kossou Gold Project",
+    "country": "CI",
+    "lat": 6.87,
+    "lng": -5.37,
+    "commodities": ["Au"],
+    "sourceUrls": [
+      "https://www.koboresources.com/en/projects",
+      "https://www.koboresources.com/en/news/press-releases/kobo-delivers-significant-progress-at-its-kossou-gold-project-in-2025-establishes-a-scalable-west-african-gold-platform-for-2026-and-hosted-the-2nd-annual-kobo-cup-",
+      "https://www.koboresources.com/en/news/press-releases/kobo-resources-reports-significant-gold-intersections-of-50-metres-at-430-g-t-au-including-10-metre-at-2000-g-t-au-and-20-metres-at-726-g-t-au-at-its-kossou-gold-project"
+    ]
+  },
+  {
     "id": "allied-cdi-complex",
     "concessionId": "ci-yaoure-kokumbo-aoi",
     "company": "Allied Gold",

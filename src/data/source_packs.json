@@ -36,6 +36,42 @@
     "text": "Technical reference: HiSeis describes 3D seismic and 2D seismic work at Yaouré to test the down-dip extension of the CMA structure, map key structures, and identify drill targets. This is useful for geophysics and structural targeting logic near the license package."
   },
   {
+    "id": "kobo-kossou-project-overview",
+    "concessionId": "ci-yaoure-kokumbo-aoi",
+    "projectId": "kobo-kossou",
+    "company": "Kobo Resources",
+    "project": "Kossou Gold Project",
+    "sourceUrl": "https://www.koboresources.com/en/projects",
+    "sourceTitle": "Kobo Resources - Kossou Gold Project",
+    "sourceType": "company_page",
+    "retrievedAt": "2026-05-09",
+    "text": "Kobo describes Kossou as a 110.2 square kilometre gold project near Yamoussoukro and adjacent to the Yaouré mine infrastructure. For the demo, it is a direct public-company comparator for a pushed-in license package rather than an investment recommendation."
+  },
+  {
+    "id": "kobo-kossou-2025-progress",
+    "concessionId": "ci-yaoure-kokumbo-aoi",
+    "projectId": "kobo-kossou",
+    "company": "Kobo Resources",
+    "project": "Kossou Gold Project",
+    "sourceUrl": "https://www.koboresources.com/en/news/press-releases/kobo-delivers-significant-progress-at-its-kossou-gold-project-in-2025-establishes-a-scalable-west-african-gold-platform-for-2026-and-hosted-the-2nd-annual-kobo-cup-",
+    "sourceTitle": "Kobo 2025 Kossou progress and target pipeline",
+    "sourceType": "news_release",
+    "retrievedAt": "2026-05-09",
+    "text": "Kobo's 2025 update discusses exploration progress, drill metres, target pipeline work, and Kossou expansion context. It gives the commercial and geology teams a current operator disclosure to open from the package."
+  },
+  {
+    "id": "kobo-kossou-drilling-2024",
+    "concessionId": "ci-yaoure-kokumbo-aoi",
+    "projectId": "kobo-kossou",
+    "company": "Kobo Resources",
+    "project": "Kossou Gold Project",
+    "sourceUrl": "https://www.koboresources.com/en/news/press-releases/kobo-resources-reports-significant-gold-intersections-of-50-metres-at-430-g-t-au-including-10-metre-at-2000-g-t-au-and-20-metres-at-726-g-t-au-at-its-kossou-gold-project",
+    "sourceTitle": "Kobo Kossou high-grade drilling intersections, July 2024",
+    "sourceType": "news_release",
+    "retrievedAt": "2026-05-09",
+    "text": "Kobo reported drill intersections from Kossou targets including Road Cut, Jagger, and Kadie. This is useful as a nearby public drilling disclosure that a geologist can inspect for geology, structure, and target style."
+  },
+  {
     "id": "allied-cdi-complex-overview",
     "concessionId": "ci-yaoure-kokumbo-aoi",
     "projectId": "allied-cdi-complex",

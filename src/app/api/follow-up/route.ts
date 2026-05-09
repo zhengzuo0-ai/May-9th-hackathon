@@ -77,7 +77,7 @@ function fallbackFollowUp(question: string, evidence: EvidenceItem[]) {
           (item) => `- ${item.summary} Source: ${item.sourceTitle}.`,
         ),
         "- Confirm package license status and boundaries against official cadastre records.",
-        "- Separate direct package evidence from nearby comparable evidence before upgrading the triage route.",
+        "- Separate direct package evidence from nearby same-trend comparables and regional context.",
       ].join("\n");
     case "Which layer is weakest?":
       return [
@@ -91,7 +91,7 @@ function fallbackFollowUp(question: string, evidence: EvidenceItem[]) {
         ...rankCompanies(evidence).map(
           ([company, count]) => `- ${company}: ${count} extracted evidence item(s).`,
         ),
-        "- Prioritize companies with resource, drilling, operating mine, or development-stage facts over proximity-only references.",
+        "- Start with companies that disclose resource, drilling, operating mine, or development-stage facts; treat proximity-only references as context.",
       ].join("\n");
     case "What is the 30-day field plan?":
       return [
@@ -99,7 +99,7 @@ function fallbackFollowUp(question: string, evidence: EvidenceItem[]) {
         "- Week 1: verify cadastre status, package coordinates, access, and public-company comparable locations.",
         "- Week 2: interpret remote-sensing disturbance, ASM/workings, drainage, and structural targets.",
         "- Week 3: field-check priority sites, collect reconnaissance samples, and log access constraints.",
-        "- Week 4: reconcile assay/geology observations with public evidence and update the PRIORITIZE / WATCH / DEFER triage route.",
+        "- Week 4: reconcile assay/geology observations with public evidence and update the expert evidence package.",
       ].join("\n");
     default:
       return [
