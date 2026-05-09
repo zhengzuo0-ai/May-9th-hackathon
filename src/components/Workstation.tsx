@@ -25,6 +25,7 @@ import projectsData from "@/data/public_companies.json";
 import sourcePacksData from "@/data/source_packs.json";
 import { getNearbyProjects } from "@/lib/geo";
 import { sourcePackToFact } from "@/lib/evidence";
+import { findPlace, listPlaceNames } from "@/lib/places";
 import type {
   Concession,
   EvidenceItem,
@@ -119,6 +120,7 @@ export default function Workstation({
   const [focusedProjectId, setFocusedProjectId] = useState<string>();
   const [intakeText, setIntakeText] = useState(initialIntakeText || intakeSeedText);
   const [intakeError, setIntakeError] = useState("");
+  const [placeQuery, setPlaceQuery] = useState("");
   const [compareId, setCompareId] = useState(staticDemos[1].concession.id);
   const [headerOpen, setHeaderOpen] = useState(true);
   const selected =
@@ -242,6 +244,30 @@ export default function Workstation({
       setRuntimeConcessions((current) => upsertConcession(current, concession));
       selectConcession(concession.id);
       setIntakeError("");
+    } catch (error) {
+      setIntakeError(error instanceof Error ? error.message : "Could not parse intake JSON");
+    }
+  }
+
+  function applyPlaceName() {
+    const place = findPlace(placeQuery);
+    if (!place) {
+      setIntakeError(
+        `Could not find "${placeQuery.trim() || "place"}" in Côte d'Ivoire. Try: ${listPlaceNames().join(", ")}.`,
+      );
+      return;
+    }
+    const json = JSON.stringify(
+      { lat: place.lat, lng: place.lng, name: place.name },
+      null,
+      2,
+    );
+    setIntakeText(json);
+    setIntakeError("");
+    try {
+      const concession = parseIntakeConcession(json);
+      setRuntimeConcessions((current) => upsertConcession(current, concession));
+      selectConcession(concession.id);
     } catch (error) {
       setIntakeError(error instanceof Error ? error.message : "Could not parse intake JSON");
     }
@@ -477,6 +503,29 @@ export default function Workstation({
               Paste a coordinate, GeoJSON Point, Polygon, or MultiPolygon. A point becomes a
               small license-style package and reuses the public-source recon workflow.
             </p>
+            <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+              <input
+                type="text"
+                value={placeQuery}
+                onChange={(event) => setPlaceQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    applyPlaceName();
+                  }
+                }}
+                placeholder={`Place name — try: ${listPlaceNames().join(", ")}`}
+                spellCheck={false}
+                className="h-9 rounded-md border border-[#2a3140] bg-[#07090d] px-3 text-xs text-[#d5dbea] outline-none transition placeholder:text-[#5a6477] focus:border-[#22c55e]"
+              />
+              <button
+                type="button"
+                onClick={applyPlaceName}
+                className="h-9 rounded-md border border-[#2a3140] bg-[#10141c] px-3 text-xs font-semibold text-[#b7c0d0] transition hover:border-[#22c55e] hover:text-[#a7f3d0]"
+              >
+                Use
+              </button>
+            </div>
             <form action="/" method="get">
               <textarea
                 name="intake"
